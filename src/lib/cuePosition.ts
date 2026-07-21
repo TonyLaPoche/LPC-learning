@@ -21,9 +21,11 @@ export type FaceAnchors = {
   forehead: Point;
   templeL: Point;
   templeR: Point;
-  /** Largeur visage approx (pour normaliser) */
   faceWidth: number;
 };
+
+/** Rectangle normalisé 0–1 (espace MediaPipe, avant miroir CSS). */
+export type NormRect = { x: number; y: number; w: number; h: number };
 
 export function faceAnchors(
   face: NormalizedLandmark[] | null,
@@ -51,12 +53,106 @@ export function faceAnchors(
 export type PositionGuess = {
   id: PositionId | null;
   confidence: number;
-  /** Bout du doigt le plus haut — point de trigger zone */
   pointer: Point | null;
 };
 
+export function pointInRect(p: Point, r: NormRect): boolean {
+  return (
+    p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h
+  );
+}
+
+function rectCenter(r: NormRect): Point {
+  return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+}
+
 /**
- * Classifie la zone LPC via le bout du doigt le plus haut (pas la paume).
+ * Zones LPC en rectangles non superposés :
+ * - Centre vertical : bouche → menton → gorge (empilés, bords joints)
+ * - Latéral : joue (dans le visage) | côté (hors visage), séparés à la joue
+ */
+export function buildZoneRects(
+  anchors: FaceAnchors,
+): Record<PositionId, NormRect[]> {
+  const midX = anchors.nose.x;
+  const fw = anchors.faceWidth;
+  const faceL = Math.min(anchors.cheekL.x, anchors.templeL.x);
+  const faceR = Math.max(anchors.cheekR.x, anchors.templeR.x);
+
+  const colHalf = fw * 0.2;
+  const colL = midX - colHalf;
+  const colR = midX + colHalf;
+  const colW = Math.max(0.02, colR - colL);
+
+  // Séparations verticales : gap menton↔gorge (barbe) + gorge étirée vers le bas
+  const mouthTop = anchors.mouth.y - fw * 0.12;
+  const mouthBot = (anchors.mouth.y + anchors.chin.y) * 0.5;
+  const chinBot = anchors.chin.y + fw * 0.04;
+  const throatGap = fw * 0.07;
+  const throatTop = chinBot + throatGap;
+  const throatBot = throatTop + fw * 0.48;
+
+  const mouth: NormRect = {
+    x: colL,
+    y: mouthTop,
+    w: colW,
+    h: Math.max(0.02, mouthBot - mouthTop),
+  };
+  const chin: NormRect = {
+    x: colL,
+    y: mouthBot,
+    w: colW,
+    h: Math.max(0.02, chinBot - mouthBot),
+  };
+  const throat: NormRect = {
+    x: colL,
+    y: throatTop,
+    w: colW,
+    h: Math.max(0.02, throatBot - throatTop),
+  };
+
+  // Joue / côté : même bande verticale, séparés en x à faceL / faceR
+  const bandTop = Math.min(anchors.templeL.y, anchors.templeR.y) - fw * 0.02;
+  const bandBot = anchors.mouth.y + fw * 0.08;
+  const bandH = Math.max(0.04, bandBot - bandTop);
+  const sideW = fw * 0.42;
+
+  const cheekL: NormRect = {
+    x: faceL,
+    y: bandTop,
+    w: Math.max(0.02, colL - faceL),
+    h: bandH,
+  };
+  const cheekR: NormRect = {
+    x: colR,
+    y: bandTop,
+    w: Math.max(0.02, faceR - colR),
+    h: bandH,
+  };
+  const sideL: NormRect = {
+    x: faceL - sideW,
+    y: bandTop,
+    w: sideW,
+    h: bandH,
+  };
+  const sideR: NormRect = {
+    x: faceR,
+    y: bandTop,
+    w: sideW,
+    h: bandH,
+  };
+
+  return {
+    mouth: [mouth],
+    chin: [chin],
+    throat: [throat],
+    cheek: [cheekL, cheekR],
+    side: [sideL, sideR],
+  };
+}
+
+/**
+ * Hit-test rectangles non superposés + score de confiance (proximité du centre).
  */
 export function classifyCuePosition(
   hand: NormalizedLandmark[] | null,
@@ -71,62 +167,43 @@ export function classifyCuePosition(
     return { id: null, confidence: 0, pointer };
   }
 
-  const fw = anchors.faceWidth;
-  const midX = anchors.nose.x;
-  const candidates: Array<{ id: PositionId; score: number }> = [];
+  const zones = buildZoneRects(anchors);
+  const hits: Array<{ id: PositionId; score: number }> = [];
 
-  const dMouth = dist(pointer, anchors.mouth) / fw;
-  candidates.push({ id: "mouth", score: 1 - Math.min(1, dMouth / 0.55) });
-
-  const dChin = dist(pointer, anchors.chin) / fw;
-  candidates.push({ id: "chin", score: 1 - Math.min(1, dChin / 0.55) });
-
-  const dCheek =
-    Math.min(dist(pointer, anchors.cheekL), dist(pointer, anchors.cheekR)) /
-    fw;
-  candidates.push({ id: "cheek", score: 1 - Math.min(1, dCheek / 0.5) });
-
-  const belowChin = pointer.y > anchors.chin.y - 0.02;
-  const nearCenter = Math.abs(pointer.x - midX) / fw < 0.55;
-  const dThroat =
-    dist(pointer, { x: midX, y: anchors.chin.y + fw * 0.25 }) / fw;
-  let throatScore = 1 - Math.min(1, dThroat / 0.65);
-  if (belowChin && nearCenter) throatScore += 0.15;
-  candidates.push({ id: "throat", score: throatScore });
-
-  const dTemple =
-    Math.min(dist(pointer, anchors.templeL), dist(pointer, anchors.templeR)) /
-    fw;
-  const outside =
-    pointer.x < anchors.cheekL.x - fw * 0.05 ||
-    pointer.x > anchors.cheekR.x + fw * 0.05;
-  let sideScore = 1 - Math.min(1, dTemple / 0.7);
-  if (outside) sideScore += 0.2;
-  if (pointer.y < anchors.chin.y && pointer.y > anchors.forehead.y - 0.05) {
-    sideScore += 0.1;
+  for (const id of Object.keys(zones) as PositionId[]) {
+    for (const rect of zones[id]) {
+      if (!pointInRect(pointer, rect)) continue;
+      const c = rectCenter(rect);
+      const fw = anchors.faceWidth;
+      const d = dist(pointer, c) / fw;
+      // Dans le rectangle : score élevé, meilleur près du centre
+      const score = 0.75 + 0.25 * (1 - Math.min(1, d / 0.35));
+      hits.push({ id, score });
+    }
   }
-  candidates.push({ id: "side", score: sideScore });
 
-  candidates.sort((a, b) => b.score - a.score);
-  const top = candidates[0]!;
-  const second = candidates[1]?.score ?? 0;
-  const confidence = Math.max(0, Math.min(1, top.score - second * 0.15));
+  if (hits.length === 0) {
+    // Soft fallback : zone dont le centre est le plus proche (rayon limité)
+    let best: { id: PositionId; score: number } | null = null;
+    for (const id of Object.keys(zones) as PositionId[]) {
+      for (const rect of zones[id]) {
+        const c = rectCenter(rect);
+        const d = dist(pointer, c) / anchors.faceWidth;
+        const score = 1 - Math.min(1, d / 0.45);
+        if (!best || score > best.score) best = { id, score };
+      }
+    }
+    if (!best || best.score < 0.45) {
+      return { id: null, confidence: 0, pointer };
+    }
+    return { id: best.id, confidence: best.score * 0.7, pointer };
+  }
 
+  hits.sort((a, b) => b.score - a.score);
+  const top = hits[0]!;
   return {
-    id: top.score > 0.35 ? top.id : null,
-    confidence,
+    id: top.id,
+    confidence: Math.min(1, top.score),
     pointer,
-  };
-}
-
-export function zoneCenters(anchors: FaceAnchors): Record<PositionId, Point> {
-  const midX = anchors.nose.x;
-  const fw = anchors.faceWidth;
-  return {
-    mouth: anchors.mouth,
-    chin: anchors.chin,
-    cheek: anchors.cheekR,
-    throat: { x: midX, y: anchors.chin.y + fw * 0.28 },
-    side: { x: anchors.templeR.x + fw * 0.35, y: anchors.templeR.y },
   };
 }

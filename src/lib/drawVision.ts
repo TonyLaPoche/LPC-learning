@@ -1,5 +1,5 @@
 import type { PositionId } from "@/data/lpc-fr";
-import { zoneCenters, type FaceAnchors } from "@/lib/cuePosition";
+import { buildZoneRects, type FaceAnchors } from "@/lib/cuePosition";
 import { HAND_CONNECTIONS, type Point } from "@/lib/handGeometry";
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision";
 
@@ -47,11 +47,11 @@ export function drawHandSkeleton(
 }
 
 const ZONE_COLORS: Record<PositionId, string> = {
-  side: "rgba(56, 189, 248, 0.35)",
-  chin: "rgba(251, 113, 133, 0.35)",
-  mouth: "rgba(45, 212, 191, 0.35)",
-  cheek: "rgba(250, 204, 21, 0.35)",
-  throat: "rgba(167, 139, 250, 0.35)",
+  side: "rgba(56, 189, 248, 0.32)",
+  chin: "rgba(251, 113, 133, 0.32)",
+  mouth: "rgba(45, 212, 191, 0.32)",
+  cheek: "rgba(250, 204, 21, 0.32)",
+  throat: "rgba(167, 139, 250, 0.32)",
 };
 
 const ZONE_LABELS: Record<PositionId, string> = {
@@ -62,6 +62,24 @@ const ZONE_LABELS: Record<PositionId, string> = {
   throat: "Gorge",
 };
 
+function roundRectPath(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  rw: number,
+  rh: number,
+  radius: number,
+) {
+  const r = Math.min(radius, rw / 2, rh / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + rw, y, x + rw, y + rh, r);
+  ctx.arcTo(x + rw, y + rh, x, y + rh, r);
+  ctx.arcTo(x, y + rh, x, y, r);
+  ctx.arcTo(x, y, x + rw, y, r);
+  ctx.closePath();
+}
+
 export function drawFaceZones(
   ctx: CanvasRenderingContext2D,
   anchors: FaceAnchors,
@@ -70,28 +88,40 @@ export function drawFaceZones(
   highlight: PositionId | null,
   lite: boolean,
 ) {
-  const centers = zoneCenters(anchors);
-  const r = Math.max(18, anchors.faceWidth * w * 0.22);
+  const zones = buildZoneRects(anchors);
 
-  for (const id of Object.keys(centers) as PositionId[]) {
-    const c = toPx(centers[id], w, h);
+  for (const id of Object.keys(zones) as PositionId[]) {
     const active = highlight === id;
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, active ? r * 1.15 : r, 0, Math.PI * 2);
-    ctx.fillStyle = active
-      ? ZONE_COLORS[id].replace("0.35", "0.55")
+    const fill = active
+      ? ZONE_COLORS[id].replace("0.32", "0.5")
       : ZONE_COLORS[id];
-    ctx.fill();
-    if (!lite || active) {
-      ctx.fillStyle = "rgba(255,255,255,0.9)";
-      ctx.font = `${active ? 13 : 11}px Figtree, sans-serif`;
-      ctx.textAlign = "center";
-      // Miroir CSS : on inverse le sens du texte pour qu’il reste lisible
-      ctx.save();
-      ctx.translate(c.x, c.y);
-      ctx.scale(-1, 1);
-      ctx.fillText(ZONE_LABELS[id], 0, 4);
-      ctx.restore();
+    const stroke = active ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.25)";
+
+    for (const rect of zones[id]) {
+      const x = rect.x * w;
+      const y = rect.y * h;
+      const rw = rect.w * w;
+      const rh = rect.h * h;
+      roundRectPath(ctx, x, y, rw, rh, 8);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = active ? 2 : 1;
+      ctx.stroke();
+
+      if (!lite || active) {
+        const cx = x + rw / 2;
+        const cy = y + rh / 2;
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.font = `${active ? 16 : 13}px Figtree, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(-1, 1);
+        ctx.fillText(ZONE_LABELS[id], 0, 0);
+        ctx.restore();
+      }
     }
   }
 }

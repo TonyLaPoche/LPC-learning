@@ -272,20 +272,27 @@ export function PracticeArena({ track, onExit, onProgress }: PracticeArenaProps)
         </div>
       )}
 
-      {/* Caméra +15% : ~41–46vh */}
+      {/* Caméra +15% : ~41–46vh — zoom léger centré visage */}
       <div className="relative h-[min(41vh,345px)] w-full shrink-0 overflow-hidden rounded-2xl border border-panel-2/80 bg-black sm:h-[min(46vh,390px)]">
-        <video
-          ref={videoRef}
-          className="absolute inset-0 h-full w-full scale-x-[-1] object-contain bg-black"
-          playsInline
-          muted
-          autoPlay
-        />
-        <canvas
-          ref={canvasRef}
-          className="pointer-events-none absolute inset-0 h-full w-full scale-x-[-1] object-contain"
-        />
-
+        <div
+          className="absolute inset-0"
+          style={{
+            transform: "scale(-1.16, 1.16)",
+            transformOrigin: "50% 38%",
+          }}
+        >
+          <video
+            ref={videoRef}
+            className="absolute inset-0 h-full w-full object-contain bg-black"
+            playsInline
+            muted
+            autoPlay
+          />
+          <canvas
+            ref={canvasRef}
+            className="pointer-events-none absolute inset-0 h-full w-full object-contain"
+          />
+        </div>
         {!camera.ready && !camera.error && (
           <div className="absolute inset-0 flex items-center justify-center bg-ink/80 text-sm">
             Démarrage caméra…
