@@ -31,11 +31,12 @@ Installable (standalone). Le service worker met en cache l’app + les modèles 
 ## MVP inclus
 
 1. Accueil + parcours (formes → positions → syllabes → mots)
-2. Layout 3 colonnes avec **encarts pub** (placeholders v2)
+2. Layout sans pubs latérales — financement par dons
 3. Tracking Main + Visage
 4. Exemples photo de formes + feedback temps réel
-5. Pack contenu **fr-FR** (clés LPC pédagogiques)
-6. Progression locale (XP / leçons complétées)
+5. Pack contenu **fr-FR** + phrases + mode libre
+6. Progression locale, profil & succès
+7. Pages À propos / Soutien / Profil
 
 ## Doc produit
 

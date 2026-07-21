@@ -89,11 +89,6 @@ export function HomeScreen({ progress, onStart }: HomeScreenProps) {
           ))}
         </div>
       </section>
-
-      <p className="text-xs text-mist/80">
-        Référentiel pédagogique inspiré du code ALPC — pas un substitut à une
-        formation. Voir PRODUCT.md pour les sources.
-      </p>
     </div>
   );
 }

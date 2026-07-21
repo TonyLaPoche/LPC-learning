@@ -80,20 +80,10 @@ Modes prévus (post-MVP) : miroir coach, dictée visuelle, arcade rythme, défis
 - Streak quotidien (v1.5)
 - Badges Formes / Positions / Premiers mots
 
-## Layout publicité
+## Layout & financement
 
-```
-┌─────────┬──────────────────────┬─────────┐
-│  Ad L   │   Contenu (cam/jeu)  │  Ad R   │
-│ ~160px  │   max ~960px         │ ~160px  │
-└─────────┴──────────────────────┴─────────┘
-```
+Plus d’encarts publicitaires latéraux dans le MVP. L’app fonctionne **au don** (Buy me a Coffee — lien à brancher). Une page Soutien explique qu’un petit don aide à éviter la pub plus tard.
 
-- Desktop : rails gauche/droite (placeholders « Pub — v2 »)
-- Mobile : pas de rails → slot bas optionnel
-- La caméra / leçon ne passe jamais sous la pub
-
-Services v2 candidats : AdSense, régie éthique, partenariat associatif / mécénat.
 
 ## Architecture technique
 
