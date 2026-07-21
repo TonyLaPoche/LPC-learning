@@ -278,177 +278,6 @@ export const SYLLABLE_DRILLS: DrillItem[] = [
   },
 ];
 
-export const WORD_DRILLS: WordDrill[] = [
-  {
-    id: "papa",
-    word: "papa",
-    keys: [
-      { syllable: "pa", handshape: "c1", position: "throat" },
-      { syllable: "pa", handshape: "c1", position: "throat" },
-    ],
-  },
-  {
-    id: "maman",
-    word: "maman",
-    keys: [
-      { syllable: "ma", handshape: "c2", position: "throat" },
-      { syllable: "man", handshape: "c2", position: "chin" },
-    ],
-  },
-  {
-    id: "bonjour",
-    word: "bonjour",
-    keys: [
-      { syllable: "bon", handshape: "c1", position: "cheek" },
-      { syllable: "jour", handshape: "c1", position: "side" },
-    ],
-  },
-  {
-    id: "merci",
-    word: "merci",
-    keys: [
-      { syllable: "mer", handshape: "c2", position: "chin" },
-      { syllable: "ci", handshape: "c5", position: "mouth" },
-    ],
-  },
-  {
-    id: "salut",
-    word: "salut",
-    keys: [
-      { syllable: "sa", handshape: "c5", position: "throat" },
-      { syllable: "lut", handshape: "c3", position: "side" },
-    ],
-  },
-  {
-    id: "oui",
-    word: "oui",
-    keys: [{ syllable: "oui", handshape: "c6", position: "side" }],
-  },
-  {
-    id: "non",
-    word: "non",
-    keys: [{ syllable: "non", handshape: "c3", position: "cheek" }],
-  },
-  {
-    id: "eau",
-    word: "eau",
-    keys: [{ syllable: "eau", handshape: "c6", position: "side" }],
-  },
-  {
-    id: "lait",
-    word: "lait",
-    keys: [{ syllable: "lait", handshape: "c3", position: "mouth" }],
-  },
-  {
-    id: "pain",
-    word: "pain",
-    keys: [{ syllable: "pain", handshape: "c1", position: "chin" }],
-  },
-  {
-    id: "chat",
-    word: "chat",
-    keys: [{ syllable: "chat", handshape: "c7", position: "throat" }],
-  },
-  {
-    id: "ami",
-    word: "ami",
-    keys: [
-      { syllable: "a", handshape: "c6", position: "throat" },
-      { syllable: "mi", handshape: "c2", position: "mouth" },
-    ],
-  },
-  {
-    id: "ecole",
-    word: "école",
-    keys: [
-      { syllable: "é", handshape: "c6", position: "mouth" },
-      { syllable: "co", handshape: "c3", position: "side" },
-      { syllable: "le", handshape: "c3", position: "mouth" },
-    ],
-  },
-  {
-    id: "livre",
-    word: "livre",
-    keys: [
-      { syllable: "li", handshape: "c3", position: "mouth" },
-      { syllable: "vre", handshape: "c6", position: "mouth" },
-    ],
-  },
-];
-
-export const PHRASE_DRILLS: PhraseDrill[] = [
-  {
-    id: "bonjour-toi",
-    phrase: "Bonjour !",
-    keys: [
-      { syllable: "bon", handshape: "c1", position: "cheek" },
-      { syllable: "jour", handshape: "c1", position: "side" },
-    ],
-  },
-  {
-    id: "merci-beaucoup",
-    phrase: "Merci beaucoup",
-    keys: [
-      { syllable: "mer", handshape: "c2", position: "chin" },
-      { syllable: "ci", handshape: "c5", position: "mouth" },
-      { syllable: "beau", handshape: "c1", position: "side" },
-      { syllable: "coup", handshape: "c3", position: "side" },
-    ],
-  },
-  {
-    id: "ca-va",
-    phrase: "Ça va ?",
-    keys: [
-      { syllable: "ça", handshape: "c5", position: "throat" },
-      { syllable: "va", handshape: "c6", position: "throat" },
-    ],
-  },
-  {
-    id: "oui-ca-va",
-    phrase: "Oui, ça va",
-    keys: [
-      { syllable: "oui", handshape: "c6", position: "side" },
-      { syllable: "ça", handshape: "c5", position: "throat" },
-      { syllable: "va", handshape: "c6", position: "throat" },
-    ],
-  },
-  {
-    id: "au-revoir",
-    phrase: "Au revoir",
-    keys: [
-      { syllable: "au", handshape: "c6", position: "side" },
-      { syllable: "re", handshape: "c4", position: "mouth" },
-      { syllable: "voir", handshape: "c6", position: "side" },
-    ],
-  },
-  {
-    id: "je-taime",
-    phrase: "Je t’aime",
-    keys: [
-      { syllable: "je", handshape: "c1", position: "mouth" },
-      { syllable: "t'", handshape: "c2", position: "mouth" },
-      { syllable: "aime", handshape: "c6", position: "mouth" },
-    ],
-  },
-  {
-    id: "a-bientot",
-    phrase: "À bientôt",
-    keys: [
-      { syllable: "à", handshape: "c6", position: "throat" },
-      { syllable: "bien", handshape: "c1", position: "chin" },
-      { syllable: "tôt", handshape: "c2", position: "side" },
-    ],
-  },
-  {
-    id: "bonne-nuit",
-    phrase: "Bonne nuit",
-    keys: [
-      { syllable: "bonne", handshape: "c1", position: "cheek" },
-      { syllable: "nuit", handshape: "c3", position: "side" },
-    ],
-  },
-];
-
 export function handshapeById(id: HandshapeId): HandshapeDef {
   return HANDSHAPES.find((h) => h.id === id)!;
 }
@@ -463,14 +292,18 @@ export type LessonTrack =
   | "syllables"
   | "words"
   | "phrases"
-  | "free";
+  | "reps-syllables"
+  | "reps-words"
+  | "reps-phrases"
+  | "free"
+  | "custom";
 
 export const TRACKS: Array<{
   id: LessonTrack;
   title: string;
   subtitle: string;
   badge: string;
-  kind: "lesson" | "free";
+  kind: "lesson" | "reps" | "free" | "custom";
 }> = [
   {
     id: "shapes",
@@ -508,10 +341,38 @@ export const TRACKS: Array<{
     kind: "lesson",
   },
   {
+    id: "reps-syllables",
+    title: "Répétitions · syllabes",
+    subtitle: "3× guidé, puis rappel sans guide",
+    badge: "↻",
+    kind: "reps",
+  },
+  {
+    id: "reps-words",
+    title: "Répétitions · mots",
+    subtitle: "Ancrer le vocabulaire du pack",
+    badge: "↻",
+    kind: "reps",
+  },
+  {
+    id: "reps-phrases",
+    title: "Répétitions · phrases",
+    subtitle: "Guidé puis rappel bonus",
+    badge: "↻",
+    kind: "reps",
+  },
+  {
     id: "free",
     title: "Mode libre",
     subtitle: "Explore sans consigne — feedback live",
     badge: "∞",
     kind: "free",
+  },
+  {
+    id: "custom",
+    title: "Phrase custom",
+    subtitle: "Écris une phrase, puis code-la clé par clé",
+    badge: "✎",
+    kind: "custom",
   },
 ];

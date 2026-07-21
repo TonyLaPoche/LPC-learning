@@ -1,5 +1,7 @@
-/** Achievements dérivés de la progression locale. */
+/** Achievements dérivés de la progression locale — par pack. */
 
+import type { PackId } from "@/data/packs";
+import { getPackContent } from "@/data/packs";
 import type { ProgressState } from "@/lib/progress";
 
 export type Achievement = {
@@ -43,22 +45,33 @@ const POS_IDS = [
 const SYLLABLE_RE =
   /^(pa|da|mi|tu|ma|la|li|ni|ra|ri|si|sa|ba|ou|va|cha|chi|ya|an|on)$/;
 
-const WORD_RE =
-  /^(papa|maman|bonjour|merci|salut|oui|non|eau|lait|pain|chat|ami|ecole|livre)(-\d+)?$/;
+function wordKeyRegex(pack: PackId): RegExp {
+  const ids = getPackContent(pack).words.map((w) => w.id).join("|");
+  return new RegExp(`^(${ids})(-\\d+)?$`);
+}
 
-const PHRASE_RE =
-  /^(bonjour-toi|merci-beaucoup|ca-va|oui-ca-va|au-revoir|je-taime|a-bientot|bonne-nuit)-\d+$/;
+function phraseKeyRegex(pack: PackId): RegExp {
+  const ids = getPackContent(pack).phrases.map((p) => p.id).join("|");
+  return new RegExp(`^(${ids})-\\d+$`);
+}
 
-export function computeAchievements(
+function packAchievements(
+  pack: PackId,
   progress: ProgressState,
   freeVisited: boolean,
+  customVisited: boolean,
 ): Achievement[] {
   const { xp, completed } = progress;
   const syllableKeys = countMatching(completed, SYLLABLE_RE);
-  const wordKeys = countMatching(completed, WORD_RE);
-  const phraseKeys = countMatching(completed, PHRASE_RE);
+  const wordKeys = countMatching(completed, wordKeyRegex(pack));
+  const phraseKeys = countMatching(completed, phraseKeyRegex(pack));
+  const recallBonus = countPrefix(completed, "reps-recall-");
+  const repsDone = countPrefix(completed, "reps-");
+  const customKeys = completed.filter(
+    (id) => id.startsWith("custom-") && id !== "custom-compose",
+  ).length;
 
-  return [
+  const shared: Achievement[] = [
     {
       id: "first-step",
       title: "Premier pas",
@@ -91,9 +104,15 @@ export function computeAchievements(
     },
     {
       id: "words-5",
-      title: "Vocabul’air",
+      title: pack === "ch" ? "Vocab’helvète" : "Vocabul’air",
       description: "Au moins 5 clés de mots",
       unlocked: wordKeys >= 5,
+    },
+    {
+      id: "words-12",
+      title: pack === "ch" ? "Romand" : "Lexique solide",
+      description: "Au moins 12 clés de mots",
+      unlocked: wordKeys >= 12,
     },
     {
       id: "phrases-1",
@@ -103,15 +122,45 @@ export function computeAchievements(
     },
     {
       id: "phrases-pro",
-      title: "Conteur",
+      title: pack === "ch" ? "Causeur du lac" : "Conteur",
       description: "Enchaîner 8 clés de phrases",
       unlocked: phraseKeys >= 8,
+    },
+    {
+      id: "reps-start",
+      title: "Répétiteur",
+      description: "Lancer le mode répétitions",
+      unlocked: repsDone >= 1,
+    },
+    {
+      id: "reps-bonus-3",
+      title: "Mémoire vive",
+      description: "3 rappels sans guide réussis",
+      unlocked: recallBonus >= 3,
+    },
+    {
+      id: "reps-bonus-8",
+      title: "Ancrage",
+      description: "8 rappels sans guide réussis",
+      unlocked: recallBonus >= 8,
     },
     {
       id: "free-explorer",
       title: "Explorateur",
       description: "Ouvrir le mode libre",
       unlocked: freeVisited,
+    },
+    {
+      id: "custom-writer",
+      title: "Auteur",
+      description: "Composer une phrase custom",
+      unlocked: customVisited || completed.includes("custom-compose"),
+    },
+    {
+      id: "custom-coder",
+      title: "Codeur libre",
+      description: "Valider 3 clés d’une phrase custom",
+      unlocked: customKeys >= 3,
     },
     {
       id: "xp-100",
@@ -153,6 +202,73 @@ export function computeAchievements(
         syllableKeys >= 1,
     },
   ];
+
+  if (pack === "ch") {
+    shared.push(
+      {
+        id: "ch-natel",
+        title: "Natel en poche",
+        description: "Coder le mot « natel »",
+        unlocked: completed.some((id) => id.startsWith("natel")),
+      },
+      {
+        id: "ch-huitante",
+        title: "Huitante",
+        description: "Valider « huitante » ou la phrase",
+        unlocked: completed.some(
+          (id) => id.startsWith("huitante") || id.startsWith("huitante-francs"),
+        ),
+      },
+      {
+        id: "ch-fondue",
+        title: "Fondue party",
+        description: "Coder fondue (mot ou phrase)",
+        unlocked: completed.some(
+          (id) => id.startsWith("fondue") || id.startsWith("fondue-ce-soir"),
+        ),
+      },
+      {
+        id: "ch-lac",
+        title: "Bord du lac",
+        description: "Valider lac / « On va au lac »",
+        unlocked: completed.some(
+          (id) => id === "lac" || id.startsWith("au-lac"),
+        ),
+      },
+    );
+  } else {
+    shared.push(
+      {
+        id: "fr-maison",
+        title: "Chez soi",
+        description: "Coder le mot « maison »",
+        unlocked: completed.some((id) => id.startsWith("maison")),
+      },
+      {
+        id: "fr-comment",
+        title: "Politesse",
+        description: "Phrase « Comment ça va ? »",
+        unlocked: completed.some((id) => id.startsWith("comment-ca-va")),
+      },
+      {
+        id: "fr-faim",
+        title: "Appétit",
+        description: "Coder « J’ai faim »",
+        unlocked: completed.some((id) => id.startsWith("j-ai-faim")),
+      },
+    );
+  }
+
+  return shared;
+}
+
+export function computeAchievements(
+  progress: ProgressState,
+  freeVisited: boolean,
+  pack: PackId = "fr",
+  customVisited = false,
+): Achievement[] {
+  return packAchievements(pack, progress, freeVisited, customVisited);
 }
 
 export function achievementStats(achievements: Achievement[]) {

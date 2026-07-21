@@ -1,14 +1,25 @@
 import { TRACKS, type LessonTrack } from "@/data/lpc-fr";
+import { PACKS, packById, type PackId } from "@/data/packs";
 import type { ProgressState } from "@/lib/progress";
 
 type HomeScreenProps = {
   progress: ProgressState;
+  pack: PackId;
+  onPackChange: (pack: PackId) => void;
   onStart: (track: LessonTrack) => void;
 };
 
-export function HomeScreen({ progress, onStart }: HomeScreenProps) {
+export function HomeScreen({
+  progress,
+  pack,
+  onPackChange,
+  onStart,
+}: HomeScreenProps) {
   const lessons = TRACKS.filter((t) => t.kind === "lesson");
+  const reps = TRACKS.filter((t) => t.kind === "reps");
   const free = TRACKS.find((t) => t.kind === "free");
+  const custom = TRACKS.find((t) => t.kind === "custom");
+  const meta = packById(pack);
 
   return (
     <div className="space-y-6">
@@ -26,8 +37,9 @@ export function HomeScreen({ progress, onStart }: HomeScreenProps) {
             <span className="block text-teal">Vois les sons.</span>
           </h1>
           <p className="mt-3 text-base text-mist sm:text-lg">
-            Parcours guidé (formes → phrases) ou mode libre pour explorer avec
-            feedback caméra — tout reste sur ton appareil.
+            Parcours guidé, répétitions, ou mode libre — pack{" "}
+            <span className="text-foam">{meta.label}</span>, tout reste sur ton
+            appareil.
           </p>
           <p className="mt-4 text-sm text-foam/80">
             XP : <span className="font-semibold text-sky">{progress.xp}</span>
@@ -40,23 +52,80 @@ export function HomeScreen({ progress, onStart }: HomeScreenProps) {
         </div>
       </section>
 
+      <section>
+        <h2 className="mb-2 font-display text-lg font-bold text-foam">
+          Pack linguistique
+        </h2>
+        <p className="mb-3 text-sm text-mist">
+          Même code gestuel LPC — vocabulaire et succès séparés par pack.
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {PACKS.map((p) => {
+            const active = p.id === pack;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onPackChange(p.id)}
+                className={`rounded-2xl border p-4 text-left transition ${
+                  active
+                    ? "border-teal bg-teal/15"
+                    : "border-panel-2/70 bg-panel/50 hover:border-teal/40"
+                }`}
+              >
+                <p className="text-xs font-semibold uppercase tracking-wider text-sky">
+                  {p.short}
+                </p>
+                <p className="mt-1 font-display text-lg font-bold">{p.label}</p>
+                <p className="mt-0.5 text-xs text-mist">{p.subtitle}</p>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
       {free && (
-        <button
-          type="button"
-          onClick={() => onStart(free.id)}
-          className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-teal/40 bg-teal/10 p-5 text-left transition hover:border-teal hover:bg-teal/15"
-        >
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-teal">
-              Sandbox
-            </p>
-            <h2 className="mt-1 font-display text-xl font-bold">{free.title}</h2>
-            <p className="mt-1 text-sm text-mist">{free.subtitle}</p>
-          </div>
-          <span className="rounded-full bg-teal px-3 py-1 text-xs font-semibold text-ink">
-            Ouvrir
-          </span>
-        </button>
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => onStart(free.id)}
+            className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-teal/40 bg-teal/10 p-5 text-left transition hover:border-teal hover:bg-teal/15"
+          >
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-teal">
+                Sandbox
+              </p>
+              <h2 className="mt-1 font-display text-xl font-bold">
+                {free.title}
+              </h2>
+              <p className="mt-1 text-sm text-mist">{free.subtitle}</p>
+            </div>
+            <span className="rounded-full bg-teal px-3 py-1 text-xs font-semibold text-ink">
+              Ouvrir
+            </span>
+          </button>
+
+          {custom && (
+            <button
+              type="button"
+              onClick={() => onStart(custom.id)}
+              className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-sky/35 bg-sky/8 p-5 text-left transition hover:border-sky/60 hover:bg-sky/12"
+            >
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-sky">
+                  Sandbox
+                </p>
+                <h2 className="mt-1 font-display text-xl font-bold">
+                  {custom.title}
+                </h2>
+                <p className="mt-1 text-sm text-mist">{custom.subtitle}</p>
+              </div>
+              <span className="rounded-full bg-sky/90 px-3 py-1 text-xs font-semibold text-ink">
+                Écrire
+              </span>
+            </button>
+          )}
+        </div>
       )}
 
       <section>
@@ -85,6 +154,31 @@ export function HomeScreen({ progress, onStart }: HomeScreenProps) {
                   Jouer
                 </span>
               </div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-2 font-display text-lg font-bold text-foam">
+          Mode répétitions
+        </h2>
+        <p className="mb-3 text-sm text-mist">
+          3 fois guidé, puis 1 rappel sans guide (bonus si réussi).
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {reps.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => onStart(t.id)}
+              className="rounded-2xl border border-sky/30 bg-sky/5 p-4 text-left transition hover:border-sky/60 hover:bg-sky/10"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wider text-sky">
+                Drill
+              </p>
+              <h3 className="mt-1 font-display text-base font-bold">{t.title}</h3>
+              <p className="mt-1 text-xs text-mist">{t.subtitle}</p>
             </button>
           ))}
         </div>

@@ -2,17 +2,26 @@ import {
   achievementStats,
   computeAchievements,
 } from "@/lib/achievements";
+import { packById, type PackId } from "@/data/packs";
 import type { ProgressState } from "@/lib/progress";
-import { loadFreeVisited } from "@/lib/visits";
+import { loadCustomVisited, loadFreeVisited } from "@/lib/visits";
 
 type ProfilePageProps = {
   progress: ProgressState;
+  pack: PackId;
 };
 
-export function ProfilePage({ progress }: ProfilePageProps) {
+export function ProfilePage({ progress, pack }: ProfilePageProps) {
   const freeVisited = loadFreeVisited();
-  const achievements = computeAchievements(progress, freeVisited);
+  const customVisited = loadCustomVisited();
+  const achievements = computeAchievements(
+    progress,
+    freeVisited,
+    pack,
+    customVisited,
+  );
   const { unlocked, total } = achievementStats(achievements);
+  const meta = packById(pack);
   const last = progress.lastPlayedAt
     ? new Date(progress.lastPlayedAt).toLocaleDateString("fr-FR", {
         day: "numeric",
@@ -25,13 +34,13 @@ export function ProfilePage({ progress }: ProfilePageProps) {
     <div className="space-y-6 pb-2">
       <header>
         <p className="text-xs font-semibold uppercase tracking-wider text-sky">
-          Profil
+          Profil · {meta.short}
         </p>
         <h1 className="mt-1 font-display text-3xl font-bold text-foam">
-          Ton parcours
+          Pack {meta.label}
         </h1>
         <p className="mt-2 text-mist">
-          XP, leçons validées et succès — tout reste sur cet appareil.
+          XP, leçons et succès de ce pack — séparés de l’autre pack.
         </p>
       </header>
 

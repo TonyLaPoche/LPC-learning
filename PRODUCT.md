@@ -65,12 +65,15 @@ Exemple : *pa / ba / ma* se ressemblent sur les lèvres ; le LPC les différenci
 
 ## Parcours pédagogique MVP
 
-1. **Formes** — tenir chaque config 1,2 s
+1. **Formes** — tenir chaque config ~1,2 s
 2. **Positions** — placer la main dans chaque zone
 3. **Syllabes** — combiner (ex. *pa, mi, la*)
-4. **Mots** — enchaîner 2–4 clés (*bonjour*, *merci*…)
+4. **Mots / Phrases** — enchaîner des clés (packs FR ou CH)
+5. **Répétitions** — 3× guidé, puis 1 rappel sans guide (bonus XP si réussi)
 
-Modes prévus (post-MVP) : miroir coach, dictée visuelle, arcade rythme, défis quotidiens, sandbox libre.
+**Packs** : Français / Suisse (même code gestuel, vocabulaire + achievements séparés).
+
+Modes plus tard : décodage vidéo (flux), miroir coach, dictée visuelle.
 
 ## Gamification
 
@@ -101,10 +104,10 @@ Réutiliser les patterns CamBateSoloTraining (`useCamera`, perf mobile, cache mo
 
 | Phase | Contenu |
 |-------|---------|
-| **MVP** (ici) | Shell PWA, pubs placeholders, cam, formes/positions/syllabes/mots FR |
-| **v1.5** | Plus de mots, streaks, TextCueS-like offline |
-| **v2** | Pubs réelles, pack CH, i18n UI, English CS optionnel |
-| **v3** | Miroir coach vidéo, multi-joueurs famille |
+| **MVP** (ici) | Shell PWA, cam, formes→phrases, mode libre, packs FR/CH, répétitions |
+| **v1.5** | Streaks, TextCueS-like offline, plus de contenus |
+| **v2** | Décodage vidéo (flux), i18n UI, English CS optionnel |
+| **v3** | Miroir coach, multi-joueurs famille |
 
 ## Risques & garde-fous
 

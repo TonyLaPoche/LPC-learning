@@ -2,24 +2,42 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   HANDSHAPES,
   POSITIONS,
-  PHRASE_DRILLS,
   SYLLABLE_DRILLS,
-  WORD_DRILLS,
   handshapeById,
   positionById,
   type HandshapeId,
   type LessonTrack,
+  type PhraseDrill,
   type PositionId,
+  type WordDrill,
 } from "@/data/lpc-fr";
+import { getPackContent, type PackId } from "@/data/packs";
 import { CueExample } from "@/components/CueExample";
 import { useCamera } from "@/hooks/useCamera";
 import { useLpcVision } from "@/hooks/useLpcVision";
-import { addXp, markCompleted, loadFaceZoom, saveFaceZoom, FACE_ZOOM_MIN, FACE_ZOOM_MAX } from "@/lib/progress";
+import {
+  addXp,
+  markCompleted,
+  loadFaceZoom,
+  saveFaceZoom,
+  FACE_ZOOM_MIN,
+  FACE_ZOOM_MAX,
+} from "@/lib/progress";
+import type { CueToken } from "@/lib/textToCues";
+
+export type CustomSession = {
+  label: string;
+  keys: CueToken[];
+};
 
 type PracticeArenaProps = {
-  track: Exclude<LessonTrack, "free">;
+  track: Exclude<LessonTrack, "free" | "custom">;
+  pack: PackId;
   onExit: () => void;
   onProgress: () => void;
+  /** Session phrase custom (ignore le track pour les étapes) */
+  customSession?: CustomSession;
+  onEditPhrase?: () => void;
 };
 
 type Step = {
@@ -28,9 +46,137 @@ type Step = {
   subtitle: string;
   handshape: HandshapeId | null;
   position: PositionId | null;
+  /** Afficher l’exemple forme/zone */
+  guided: boolean;
+  /** XP bonus si réussi (rappel sans guide) */
+  bonus: boolean;
 };
 
-function buildSteps(track: Exclude<LessonTrack, "free">): Step[] {
+const GUIDED_REPS = 3;
+
+function pushKeySteps(
+  steps: Step[],
+  baseId: string,
+  title: string,
+  keys: Array<{ syllable: string; handshape: HandshapeId; position: PositionId }>,
+  opts: { guided: boolean; bonus: boolean; label: string },
+) {
+  keys.forEach((k, i) => {
+    steps.push({
+      id: `${baseId}-${i}`,
+      title: keys.length > 1 ? `${title} · ${k.syllable}` : title,
+      subtitle: opts.label,
+      handshape: k.handshape,
+      position: k.position,
+      guided: opts.guided,
+      bonus: opts.bonus && i === keys.length - 1,
+    });
+  });
+}
+
+/** 3× guidé item i, puis 1× rappel sans guide de i-1 */
+function buildRepSyllableSteps(): Step[] {
+  const items = SYLLABLE_DRILLS;
+  const steps: Step[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const cur = items[i]!;
+    for (let r = 0; r < GUIDED_REPS; r++) {
+      steps.push({
+        id: `reps-syl-${cur.id}-g${r}`,
+        title: cur.display,
+        subtitle: `Guidé ${r + 1}/${GUIDED_REPS}`,
+        handshape: cur.cue.handshape,
+        position: cur.cue.position,
+        guided: true,
+        bonus: false,
+      });
+    }
+    if (i >= 1) {
+      const prev = items[i - 1]!;
+      steps.push({
+        id: `reps-recall-${prev.id}`,
+        title: prev.display,
+        subtitle: "Sans guide — bonus si réussi",
+        handshape: prev.cue.handshape,
+        position: prev.cue.position,
+        guided: false,
+        bonus: true,
+      });
+    }
+  }
+  return steps;
+}
+
+function buildRepWordSteps(words: WordDrill[]): Step[] {
+  const steps: Step[] = [];
+  const slice = words.slice(0, 12);
+  for (let i = 0; i < slice.length; i++) {
+    const cur = slice[i]!;
+    for (let r = 0; r < GUIDED_REPS; r++) {
+      pushKeySteps(steps, `reps-w-${cur.id}-g${r}`, cur.word, cur.keys, {
+        guided: true,
+        bonus: false,
+        label: `Guidé ${r + 1}/${GUIDED_REPS} · clé`,
+      });
+    }
+    if (i >= 1) {
+      const prev = slice[i - 1]!;
+      pushKeySteps(steps, `reps-recall-${prev.id}`, prev.word, prev.keys, {
+        guided: false,
+        bonus: true,
+        label: "Sans guide — bonus",
+      });
+    }
+  }
+  return steps;
+}
+
+function buildRepPhraseSteps(phrases: PhraseDrill[]): Step[] {
+  const steps: Step[] = [];
+  const slice = phrases.slice(0, 10);
+  for (let i = 0; i < slice.length; i++) {
+    const cur = slice[i]!;
+    for (let r = 0; r < GUIDED_REPS; r++) {
+      pushKeySteps(steps, `reps-p-${cur.id}-g${r}`, cur.phrase, cur.keys, {
+        guided: true,
+        bonus: false,
+        label: `Guidé ${r + 1}/${GUIDED_REPS}`,
+      });
+    }
+    if (i >= 1) {
+      const prev = slice[i - 1]!;
+      pushKeySteps(steps, `reps-recall-${prev.id}`, prev.phrase, prev.keys, {
+        guided: false,
+        bonus: true,
+        label: "Sans guide — bonus",
+      });
+    }
+  }
+  return steps;
+}
+
+function buildCustomSteps(session: CustomSession): Step[] {
+  return session.keys.map((k, i) => ({
+    id: `custom-${i}-${k.syllable}`,
+    title: `${session.label} · ${k.syllable}`,
+    subtitle: `Clé ${i + 1}/${session.keys.length}`,
+    handshape: k.handshape,
+    position: k.position,
+    guided: true,
+    bonus: false,
+  }));
+}
+
+function buildSteps(
+  track: Exclude<LessonTrack, "free" | "custom">,
+  pack: PackId,
+): Step[] {
+  const { words, phrases } = getPackContent(pack);
+
+  if (track === "reps-syllables") return buildRepSyllableSteps();
+  if (track === "reps-words") return buildRepWordSteps(words);
+  if (track === "reps-phrases") return buildRepPhraseSteps(phrases);
+
   if (track === "shapes") {
     return HANDSHAPES.map((h) => ({
       id: `shape-${h.id}`,
@@ -38,6 +184,8 @@ function buildSteps(track: Exclude<LessonTrack, "free">): Step[] {
       subtitle: `${h.hint} · ${h.consonants.join(", ")}`,
       handshape: h.id,
       position: null,
+      guided: true,
+      bonus: false,
     }));
   }
   if (track === "positions") {
@@ -47,6 +195,8 @@ function buildSteps(track: Exclude<LessonTrack, "free">): Step[] {
       subtitle: `${p.hint} · ${p.vowels.join(", ")}`,
       handshape: null,
       position: p.id,
+      guided: true,
+      bonus: false,
     }));
   }
   if (track === "syllables") {
@@ -56,11 +206,13 @@ function buildSteps(track: Exclude<LessonTrack, "free">): Step[] {
       subtitle: s.tip ?? s.label,
       handshape: s.cue.handshape,
       position: s.cue.position,
+      guided: true,
+      bonus: false,
     }));
   }
   if (track === "phrases") {
     const steps: Step[] = [];
-    for (const p of PHRASE_DRILLS) {
+    for (const p of phrases) {
       p.keys.forEach((k, i) => {
         steps.push({
           id: `${p.id}-${i}`,
@@ -68,13 +220,15 @@ function buildSteps(track: Exclude<LessonTrack, "free">): Step[] {
           subtitle: `Clé ${i + 1}/${p.keys.length}`,
           handshape: k.handshape,
           position: k.position,
+          guided: true,
+          bonus: false,
         });
       });
     }
     return steps;
   }
   const steps: Step[] = [];
-  for (const w of WORD_DRILLS) {
+  for (const w of words) {
     w.keys.forEach((k, i) => {
       steps.push({
         id: `${w.id}-${i}`,
@@ -82,6 +236,8 @@ function buildSteps(track: Exclude<LessonTrack, "free">): Step[] {
         subtitle: `Clé ${i + 1}/${w.keys.length}`,
         handshape: k.handshape,
         position: k.position,
+        guided: true,
+        bonus: false,
       });
     });
   }
@@ -90,11 +246,25 @@ function buildSteps(track: Exclude<LessonTrack, "free">): Step[] {
 
 const HOLD_MS = 1200;
 
-export function PracticeArena({ track, onExit, onProgress }: PracticeArenaProps) {
-  const steps = useMemo(() => buildSteps(track), [track]);
+export function PracticeArena({
+  track,
+  pack,
+  onExit,
+  onProgress,
+  customSession,
+  onEditPhrase,
+}: PracticeArenaProps) {
+  const steps = useMemo(
+    () =>
+      customSession
+        ? buildCustomSteps(customSession)
+        : buildSteps(track, pack),
+    [track, pack, customSession],
+  );
   const [index, setIndex] = useState(0);
   const [holdPct, setHoldPct] = useState(0);
   const [flashOk, setFlashOk] = useState(false);
+  const [flashBonus, setFlashBonus] = useState(false);
   const [sessionDone, setSessionDone] = useState(false);
   const [faceZoom, setFaceZoom] = useState(() => loadFaceZoom());
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -105,14 +275,18 @@ export function PracticeArena({ track, onExit, onProgress }: PracticeArenaProps)
   const indexRef = useRef(0);
   const stepsLenRef = useRef(steps.length);
   const stepIdRef = useRef(steps[0]!.id);
+  const stepBonusRef = useRef(false);
   const onProgressRef = useRef(onProgress);
+  const packRef = useRef(pack);
   const matchAllRef = useRef(false);
   const sessionDoneRef = useRef(false);
 
   indexRef.current = index;
   stepsLenRef.current = steps.length;
   stepIdRef.current = steps[index]!.id;
+  stepBonusRef.current = steps[index]!.bonus;
   onProgressRef.current = onProgress;
+  packRef.current = pack;
   sessionDoneRef.current = sessionDone;
 
   const camera = useCamera(videoRef);
@@ -143,7 +317,13 @@ export function PracticeArena({ track, onExit, onProgress }: PracticeArenaProps)
     completingRef.current = false;
     setHoldPct(0);
     setFlashOk(false);
-  }, [index, track]);
+    setFlashBonus(false);
+  }, [index, track, pack, customSession]);
+
+  useEffect(() => {
+    setIndex(0);
+    setSessionDone(false);
+  }, [customSession?.label, track, pack]);
 
   useEffect(() => {
     let raf = 0;
@@ -175,9 +355,13 @@ export function PracticeArena({ track, onExit, onProgress }: PracticeArenaProps)
 
       if (holdAcc.current >= HOLD_MS) {
         completingRef.current = true;
+        const isBonus = stepBonusRef.current;
         setFlashOk(true);
-        markCompleted(stepIdRef.current);
-        addXp(5);
+        setFlashBonus(isBonus);
+        const baseXp = isBonus ? 20 : 5;
+        const completeXp = isBonus ? 25 : 15;
+        markCompleted(stepIdRef.current, completeXp, packRef.current);
+        addXp(baseXp, packRef.current);
         onProgressRef.current();
 
         const isLast = indexRef.current >= stepsLenRef.current - 1;
@@ -199,13 +383,14 @@ export function PracticeArena({ track, onExit, onProgress }: PracticeArenaProps)
       alive = false;
       cancelAnimationFrame(raf);
     };
-  }, [track]);
+  }, [track, pack]);
 
   const restart = () => {
     holdAcc.current = 0;
     lastTs.current = null;
     completingRef.current = false;
     setFlashOk(false);
+    setFlashBonus(false);
     setHoldPct(0);
     setIndex(0);
     setSessionDone(false);
@@ -221,13 +406,24 @@ export function PracticeArena({ track, onExit, onProgress }: PracticeArenaProps)
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={onExit}
-          className="rounded-full border border-panel-2 px-3 py-1 text-sm text-mist hover:border-foam/40 hover:text-foam"
-        >
-          ← Accueil
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onExit}
+            className="rounded-full border border-panel-2 px-3 py-1 text-sm text-mist hover:border-foam/40 hover:text-foam"
+          >
+            ← Accueil
+          </button>
+          {onEditPhrase && (
+            <button
+              type="button"
+              onClick={onEditPhrase}
+              className="rounded-full border border-sky/40 px-3 py-1 text-sm text-sky hover:border-sky"
+            >
+              Modifier
+            </button>
+          )}
+        </div>
         <p className="text-sm text-mist">
           {sessionDone ? "Terminé" : `${index + 1} / ${steps.length}`}
         </p>
@@ -260,7 +456,7 @@ export function PracticeArena({ track, onExit, onProgress }: PracticeArenaProps)
         <div className="grid shrink-0 grid-cols-[1fr_auto] items-center gap-3 rounded-2xl border border-panel-2/70 bg-panel/70 p-3 sm:gap-4 sm:p-4">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-sky">
-              Cible
+              {step.guided ? "Cible" : "Rappel"}
             </p>
             <h2 className="font-display text-xl font-bold leading-tight sm:text-2xl">
               {step.title}
@@ -268,28 +464,42 @@ export function PracticeArena({ track, onExit, onProgress }: PracticeArenaProps)
             <p className="mt-0.5 line-clamp-2 text-xs text-mist sm:text-sm">
               {step.subtitle}
             </p>
-            <div className="mt-1.5 flex flex-wrap gap-1.5 text-[10px] sm:text-xs">
-              {step.handshape && (
-                <span className="rounded-full bg-ink/70 px-2 py-0.5 text-teal">
-                  {handshapeById(step.handshape).label}
-                </span>
-              )}
-              {step.position && (
-                <span className="rounded-full bg-ink/70 px-2 py-0.5 text-sky">
-                  {positionById(step.position).label}
-                </span>
-              )}
-            </div>
+            {step.guided ? (
+              <div className="mt-1.5 flex flex-wrap gap-1.5 text-[10px] sm:text-xs">
+                {step.handshape && (
+                  <span className="rounded-full bg-ink/70 px-2 py-0.5 text-teal">
+                    {handshapeById(step.handshape).label}
+                  </span>
+                )}
+                {step.position && (
+                  <span className="rounded-full bg-ink/70 px-2 py-0.5 text-sky">
+                    {positionById(step.position).label}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <p className="mt-1.5 text-[10px] text-coral sm:text-xs">
+                Pas d’exemple — retrouve la clé toi-même
+              </p>
+            )}
           </div>
-          <CueExample
-            handshape={step.handshape}
-            position={step.position}
-            compact
-          />
+          {step.guided ? (
+            <CueExample
+              handshape={step.handshape}
+              position={step.position}
+              compact
+            />
+          ) : (
+            <div
+              className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed border-coral/40 bg-ink/40 text-2xl text-coral sm:h-20 sm:w-20"
+              aria-hidden
+            >
+              ?
+            </div>
+          )}
         </div>
       )}
 
-      {/* Caméra — zoom ancré sur le visage (MediaPipe), boîte au ratio natif */}
       <div className="relative flex h-[min(41vh,345px)] w-full shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-panel-2/80 bg-black sm:h-[min(46vh,390px)]">
         <div
           className="relative h-full max-w-full"
@@ -333,7 +543,7 @@ export function PracticeArena({ track, onExit, onProgress }: PracticeArenaProps)
         {flashOk && !sessionDone && (
           <div className="absolute inset-x-0 top-2 z-10 flex justify-center">
             <span className="rounded-full bg-ok px-3 py-1 text-xs font-semibold text-ink shadow-lg">
-              Bravo !
+              {flashBonus ? "Bonus !" : "Bravo !"}
             </span>
           </div>
         )}
@@ -380,7 +590,9 @@ export function PracticeArena({ track, onExit, onProgress }: PracticeArenaProps)
               }`}
             >
               <p className="text-mist">Forme</p>
-              <p className="truncate font-medium">{shapeLabel}</p>
+              <p className="truncate font-medium">
+                {step.guided ? shapeLabel : "…"}
+              </p>
             </div>
             <div
               className={`rounded-xl border bg-panel/60 px-2 py-1.5 ${
@@ -392,7 +604,9 @@ export function PracticeArena({ track, onExit, onProgress }: PracticeArenaProps)
               }`}
             >
               <p className="text-mist">Zone</p>
-              <p className="truncate font-medium">{posLabel}</p>
+              <p className="truncate font-medium">
+                {step.guided ? posLabel : "…"}
+              </p>
             </div>
             <div className="rounded-xl border border-panel-2/70 bg-panel/60 px-2 py-1.5">
               <p className="text-mist">Hold {holdPct}%</p>
@@ -427,7 +641,9 @@ export function PracticeArena({ track, onExit, onProgress }: PracticeArenaProps)
                 ? "Montre une main"
                 : vision.status === "loading"
                   ? "Modèles…"
-                  : "Imite l’exemple"}
+                  : step.guided
+                    ? "Imite l’exemple"
+                    : "Code de mémoire"}
             </p>
           </div>
         </div>

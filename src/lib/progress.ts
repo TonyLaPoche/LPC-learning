@@ -1,5 +1,12 @@
-const STORAGE_KEY = "cle-lpc-progress-v1";
+import type { PackId } from "@/data/packs";
+import { loadPack } from "@/data/packs";
+
+const LEGACY_KEY = "cle-lpc-progress-v1";
 const ZOOM_KEY = "cle-lpc-face-zoom-v1";
+
+function progressKey(pack: PackId): string {
+  return `cle-lpc-progress-${pack}-v1`;
+}
 
 export type ProgressState = {
   xp: number;
@@ -35,10 +42,9 @@ export function saveFaceZoom(zoom: number) {
   localStorage.setItem(ZOOM_KEY, String(clamped));
 }
 
-export function loadProgress(): ProgressState {
+function parseProgress(raw: string | null): ProgressState {
+  if (!raw) return { ...DEFAULT };
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...DEFAULT };
     const parsed = JSON.parse(raw) as ProgressState;
     return {
       xp: parsed.xp ?? 0,
@@ -50,25 +56,55 @@ export function loadProgress(): ProgressState {
   }
 }
 
-export function saveProgress(state: ProgressState) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function migrateLegacyToFr() {
+  try {
+    const frKey = progressKey("fr");
+    if (localStorage.getItem(frKey)) return;
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if (legacy) {
+      localStorage.setItem(frKey, legacy);
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
-export function addXp(amount: number): ProgressState {
-  const next = loadProgress();
+export function loadProgress(pack?: PackId): ProgressState {
+  const id = pack ?? loadPack();
+  if (id === "fr") migrateLegacyToFr();
+  try {
+    return parseProgress(localStorage.getItem(progressKey(id)));
+  } catch {
+    return { ...DEFAULT };
+  }
+}
+
+export function saveProgress(state: ProgressState, pack?: PackId) {
+  const id = pack ?? loadPack();
+  localStorage.setItem(progressKey(id), JSON.stringify(state));
+}
+
+export function addXp(amount: number, pack?: PackId): ProgressState {
+  const id = pack ?? loadPack();
+  const next = loadProgress(id);
   next.xp += amount;
   next.lastPlayedAt = new Date().toISOString();
-  saveProgress(next);
+  saveProgress(next, id);
   return next;
 }
 
-export function markCompleted(id: string, xp = 15): ProgressState {
-  const next = loadProgress();
-  if (!next.completed.includes(id)) {
-    next.completed.push(id);
+export function markCompleted(
+  lessonId: string,
+  xp = 15,
+  pack?: PackId,
+): ProgressState {
+  const id = pack ?? loadPack();
+  const next = loadProgress(id);
+  if (!next.completed.includes(lessonId)) {
+    next.completed.push(lessonId);
     next.xp += xp;
   }
   next.lastPlayedAt = new Date().toISOString();
-  saveProgress(next);
+  saveProgress(next, id);
   return next;
 }
