@@ -5,18 +5,19 @@
 
 import type { HandshapeId, PositionId } from "@/data/lpc-fr";
 import type { PackId } from "@/data/packs";
+import { lookupLexiconFr } from "@/data/lexicon-fr";
+import { phonesToCues, type CueToken } from "@/lib/lpcPhonemes";
 import { textToCuesEn } from "@/lib/textToCuesEn";
 
-export type CueToken = {
-  syllable: string;
-  handshape: HandshapeId;
-  position: PositionId;
-};
+export type { CueToken };
 
 export type TextToCuesResult = {
   keys: CueToken[];
   words: string[];
   warnings: string[];
+  /** Combien de mots issus du lexique phonétique */
+  fromLexicon?: number;
+  fromRules?: number;
 };
 
 /** Voyelles / digraphes → position (plus longs d’abord) */
@@ -259,6 +260,11 @@ export function normalizePhrase(text: string): string {
 
 const MAX_KEYS = 28;
 
+/** Orthographe → clés via règles (fallback). */
+export function cueWordOrthographic(raw: string): CueToken[] {
+  return cueWord(raw);
+}
+
 export function textToCues(text: string): TextToCuesResult {
   const warnings: string[] = [];
   const normalized = normalizePhrase(text);
@@ -268,13 +274,32 @@ export function textToCues(text: string): TextToCuesResult {
 
   const words = normalized.split(" ").filter(Boolean);
   const keys: CueToken[] = [];
+  let fromLexicon = 0;
+  let fromRules = 0;
 
   for (const w of words) {
+    const entry = lookupLexiconFr(w);
+    if (entry) {
+      const lexKeys = phonesToCues(entry.phones, entry.display);
+      if (lexKeys.length > 0) {
+        keys.push(...lexKeys);
+        fromLexicon += 1;
+        continue;
+      }
+    }
     keys.push(...cueWord(w));
+    fromRules += 1;
   }
 
   if (keys.length === 0) {
     warnings.push("Impossible d’extraire des clés — essaie d’autres mots.");
+  }
+  if (fromRules > 0) {
+    warnings.push(
+      fromLexicon > 0
+        ? `${fromRules} mot(s) hors dico → règles orthographiques (approx.).`
+        : "Hors dico phonétique → règles orthographiques (approximation).",
+    );
   }
   if (keys.length > MAX_KEYS) {
     warnings.push(
@@ -286,6 +311,8 @@ export function textToCues(text: string): TextToCuesResult {
     keys: keys.slice(0, MAX_KEYS),
     words,
     warnings,
+    fromLexicon,
+    fromRules,
   };
 }
 

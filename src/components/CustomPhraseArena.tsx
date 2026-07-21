@@ -147,7 +147,11 @@ export function CustomPhraseArena({
           <p className="mt-1 text-[11px] text-mist">
             {isEn
               ? "Pedagogical approximation — not an official judge."
-              : "Approximation pédagogique — pas un juge officiel."}
+              : preview.fromLexicon && preview.fromLexicon > 0 && !preview.fromRules
+                ? "Via dico phonétique → clés LPC."
+                : preview.fromLexicon && preview.fromRules
+                  ? "Dico + règles orthographiques (approx.)."
+                  : "Approximation pédagogique — pas un juge officiel."}
           </p>
           <ol className="mt-3 space-y-2">
             {preview.keys.map((k, i) => (

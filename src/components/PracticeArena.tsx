@@ -26,7 +26,7 @@ import {
   FACE_ZOOM_MIN,
   FACE_ZOOM_MAX,
 } from "@/lib/progress";
-import type { CueToken } from "@/lib/textToCues";
+import type { CueToken } from "@/lib/lpcPhonemes";
 
 export type CustomSession = {
   label: string;

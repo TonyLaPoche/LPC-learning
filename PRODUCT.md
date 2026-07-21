@@ -75,6 +75,8 @@ Exemple : *pa / ba / ma* se ressemblent sur les lèvres ; le LPC les différenci
 
 Modes plus tard : décodage vidéo (flux), miroir coach, dictée visuelle.
 
+**Phrase custom FR** : pipeline `mot → phonèmes (lexique) → clés LPC`, fallback règles orthographiques si mot absent du dico.
+
 ## Gamification
 
 - XP par réussite maintenue (hold)
