@@ -22,7 +22,7 @@ export function SupportPage() {
         </p>
         <p className="text-sm text-mist">
           Hébergement, temps de développement, contenus pédagogiques : un café
-          finance concrètement la suite (plus de mots, packs Suisse, accessibilité…).
+          finance concrètement la suite (plus de mots, pack anglais, accessibilité…).
         </p>
       </section>
 

@@ -1,10 +1,32 @@
-/** Packs linguistiques : même code gestuel LPC, contenus différents. */
+/** Packs : LPC français vs English Cued Speech (tables différentes). */
 
-import type { PhraseDrill, WordDrill } from "@/data/lpc-fr";
-import { CONTENT_CH } from "@/data/content-ch";
+import type {
+  DrillItem,
+  HandshapeDef,
+  HandshapeId,
+  PhraseDrill,
+  PositionDef,
+  PositionId,
+  WordDrill,
+} from "@/data/lpc-fr";
+import {
+  HANDSHAPES,
+  POSITIONS,
+  SYLLABLE_DRILLS,
+  handshapeById,
+  positionById,
+} from "@/data/lpc-fr";
+import {
+  HANDSHAPES_EN,
+  POSITIONS_EN,
+  SYLLABLE_DRILLS_EN,
+  handshapeByIdEn,
+  positionByIdEn,
+} from "@/data/cs-en";
+import { CONTENT_EN } from "@/data/content-en";
 import { CONTENT_FR } from "@/data/content-fr";
 
-export type PackId = "fr" | "ch";
+export type PackId = "fr" | "en";
 
 export type PackMeta = {
   id: PackId;
@@ -21,15 +43,15 @@ export type PackContent = {
 export const PACKS: PackMeta[] = [
   {
     id: "fr",
-    label: "Français",
+    label: "Français (LPC)",
     short: "FR",
-    subtitle: "Vocabulaire France",
+    subtitle: "Langue française parlée complétée",
   },
   {
-    id: "ch",
-    label: "Suisse",
-    short: "CH",
-    subtitle: "Vocabulaire helvétique",
+    id: "en",
+    label: "English (CS)",
+    short: "EN",
+    subtitle: "American English Cued Speech",
   },
 ];
 
@@ -38,7 +60,12 @@ const PACK_STORAGE = "cle-lpc-pack-v1";
 export function loadPack(): PackId {
   try {
     const raw = localStorage.getItem(PACK_STORAGE);
-    if (raw === "ch" || raw === "fr") return raw;
+    if (raw === "en" || raw === "fr") return raw;
+    // Ancien pack Suisse → Français
+    if (raw === "ch") {
+      localStorage.setItem(PACK_STORAGE, "fr");
+      return "fr";
+    }
   } catch {
     /* ignore */
   }
@@ -54,5 +81,28 @@ export function packById(id: PackId): PackMeta {
 }
 
 export function getPackContent(id: PackId): PackContent {
-  return id === "ch" ? CONTENT_CH : CONTENT_FR;
+  return id === "en" ? CONTENT_EN : CONTENT_FR;
+}
+
+export function getPackHandshapes(id: PackId): HandshapeDef[] {
+  return id === "en" ? HANDSHAPES_EN : HANDSHAPES;
+}
+
+export function getPackPositions(id: PackId): PositionDef[] {
+  return id === "en" ? POSITIONS_EN : POSITIONS;
+}
+
+export function getPackSyllables(id: PackId): DrillItem[] {
+  return id === "en" ? SYLLABLE_DRILLS_EN : SYLLABLE_DRILLS;
+}
+
+export function packHandshape(
+  pack: PackId,
+  id: HandshapeId,
+): HandshapeDef {
+  return pack === "en" ? handshapeByIdEn(id) : handshapeById(id);
+}
+
+export function packPosition(pack: PackId, id: PositionId): PositionDef {
+  return pack === "en" ? positionByIdEn(id) : positionById(id);
 }

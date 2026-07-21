@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  HANDSHAPES,
-  POSITIONS,
-  SYLLABLE_DRILLS,
-  handshapeById,
-  positionById,
   type HandshapeId,
   type LessonTrack,
   type PhraseDrill,
   type PositionId,
   type WordDrill,
 } from "@/data/lpc-fr";
-import { getPackContent, type PackId } from "@/data/packs";
+import {
+  getPackContent,
+  getPackHandshapes,
+  getPackPositions,
+  getPackSyllables,
+  packHandshape,
+  packPosition,
+  type PackId,
+} from "@/data/packs";
 import { CueExample } from "@/components/CueExample";
 import { useCamera } from "@/hooks/useCamera";
 import { useLpcVision } from "@/hooks/useLpcVision";
@@ -35,7 +38,6 @@ type PracticeArenaProps = {
   pack: PackId;
   onExit: () => void;
   onProgress: () => void;
-  /** Session phrase custom (ignore le track pour les étapes) */
   customSession?: CustomSession;
   onEditPhrase?: () => void;
 };
@@ -46,9 +48,7 @@ type Step = {
   subtitle: string;
   handshape: HandshapeId | null;
   position: PositionId | null;
-  /** Afficher l’exemple forme/zone */
   guided: boolean;
-  /** XP bonus si réussi (rappel sans guide) */
   bonus: boolean;
 };
 
@@ -75,8 +75,8 @@ function pushKeySteps(
 }
 
 /** 3× guidé item i, puis 1× rappel sans guide de i-1 */
-function buildRepSyllableSteps(): Step[] {
-  const items = SYLLABLE_DRILLS;
+function buildRepSyllableSteps(pack: PackId): Step[] {
+  const items = getPackSyllables(pack);
   const steps: Step[] = [];
   for (let i = 0; i < items.length; i++) {
     const cur = items[i]!;
@@ -172,13 +172,16 @@ function buildSteps(
   pack: PackId,
 ): Step[] {
   const { words, phrases } = getPackContent(pack);
+  const handshapes = getPackHandshapes(pack);
+  const positions = getPackPositions(pack);
+  const syllables = getPackSyllables(pack);
 
-  if (track === "reps-syllables") return buildRepSyllableSteps();
+  if (track === "reps-syllables") return buildRepSyllableSteps(pack);
   if (track === "reps-words") return buildRepWordSteps(words);
   if (track === "reps-phrases") return buildRepPhraseSteps(phrases);
 
   if (track === "shapes") {
-    return HANDSHAPES.map((h) => ({
+    return handshapes.map((h) => ({
       id: `shape-${h.id}`,
       title: h.label,
       subtitle: `${h.hint} · ${h.consonants.join(", ")}`,
@@ -189,7 +192,7 @@ function buildSteps(
     }));
   }
   if (track === "positions") {
-    return POSITIONS.map((p) => ({
+    return positions.map((p) => ({
       id: `pos-${p.id}`,
       title: p.label,
       subtitle: `${p.hint} · ${p.vowels.join(", ")}`,
@@ -200,7 +203,7 @@ function buildSteps(
     }));
   }
   if (track === "syllables") {
-    return SYLLABLE_DRILLS.map((s) => ({
+    return syllables.map((s) => ({
       id: s.id,
       title: s.display,
       subtitle: s.tip ?? s.label,
@@ -397,10 +400,10 @@ export function PracticeArena({
   };
 
   const shapeLabel = vision.reading.handshape
-    ? handshapeById(vision.reading.handshape).label
+    ? packHandshape(pack, vision.reading.handshape).label
     : "—";
   const posLabel = vision.reading.position
-    ? positionById(vision.reading.position).label
+    ? packPosition(pack, vision.reading.position).label
     : "—";
 
   return (
@@ -468,12 +471,12 @@ export function PracticeArena({
               <div className="mt-1.5 flex flex-wrap gap-1.5 text-[10px] sm:text-xs">
                 {step.handshape && (
                   <span className="rounded-full bg-ink/70 px-2 py-0.5 text-teal">
-                    {handshapeById(step.handshape).label}
+                    {packHandshape(pack, step.handshape).label}
                   </span>
                 )}
                 {step.position && (
                   <span className="rounded-full bg-ink/70 px-2 py-0.5 text-sky">
-                    {positionById(step.position).label}
+                    {packPosition(pack, step.position).label}
                   </span>
                 )}
               </div>

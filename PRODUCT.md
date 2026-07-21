@@ -9,7 +9,7 @@ Publics cibles :
 - Parents / entourage d’enfants sourds ou malentendants
 - Codeurs en formation
 - Curieux / étudiants en sciences du langage
-- Plus tard : packs Suisse (contenu), anglais Cued Speech (autre table phonémique)
+- Plus tard : packs supplémentaires, autres langues Cued Speech
 
 ## LPC en 30 secondes
 
@@ -34,9 +34,9 @@ Exemple : *pa / ba / ma* se ressemblent sur les lèvres ; le LPC les différenci
 | Fondation pour l’audition | https://www.fondationpourlaudition.org/ | Vulgarisation |
 | Surdités Info Service | https://surdites-info-service.fr/ | Schéma 5×8 |
 
-**LPC Suisse** : même code gestuel que la France francophone ; différencier via packs de **vocabulaire / exemples**, pas un second alphabet manuel.
+**LPC Suisse / Belgique francophone** : même code gestuel que la France ; pas besoin d’un second alphabet.
 
-**Autres langues** : adapter la table phonème → (forme, position) (ex. English Cued Speech).
+**English Cued Speech** : autre table (8 formes × **4** positions, groupements consonnes/voyelles différents du LPC FR).
 
 ## Référentiel MVP (`fr-FR`)
 
@@ -68,10 +68,10 @@ Exemple : *pa / ba / ma* se ressemblent sur les lèvres ; le LPC les différenci
 1. **Formes** — tenir chaque config ~1,2 s
 2. **Positions** — placer la main dans chaque zone
 3. **Syllabes** — combiner (ex. *pa, mi, la*)
-4. **Mots / Phrases** — enchaîner des clés (packs FR ou CH)
+4. **Mots / Phrases** — enchaîner des clés (pack FR ou EN)
 5. **Répétitions** — 3× guidé, puis 1 rappel sans guide (bonus XP si réussi)
 
-**Packs** : Français / Suisse (même code gestuel, vocabulaire + achievements séparés).
+**Packs** : Français (LPC) / English (Cued Speech) — **tables différentes**, achievements séparés.
 
 Modes plus tard : décodage vidéo (flux), miroir coach, dictée visuelle.
 
@@ -104,7 +104,7 @@ Réutiliser les patterns CamBateSoloTraining (`useCamera`, perf mobile, cache mo
 
 | Phase | Contenu |
 |-------|---------|
-| **MVP** (ici) | Shell PWA, cam, formes→phrases, mode libre, packs FR/CH, répétitions |
+| **MVP** (ici) | Shell PWA, cam, formes→phrases, mode libre, packs FR/EN, répétitions |
 | **v1.5** | Streaks, TextCueS-like offline, plus de contenus |
 | **v2** | Décodage vidéo (flux), i18n UI, English CS optionnel |
 | **v3** | Miroir coach, multi-joueurs famille |

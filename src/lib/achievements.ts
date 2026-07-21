@@ -42,8 +42,15 @@ const POS_IDS = [
   "pos-throat",
 ];
 
-const SYLLABLE_RE =
+const SYLLABLE_RE_FR =
   /^(pa|da|mi|tu|ma|la|li|ni|ra|ri|si|sa|ba|ou|va|cha|chi|ya|an|on)$/;
+
+const SYLLABLE_RE_EN =
+  /^(me|see|to|no|you|go|she|the|hi|bye|yes|be|we|tea|do|so|my|too)$/;
+
+function syllableRegex(pack: PackId): RegExp {
+  return pack === "en" ? SYLLABLE_RE_EN : SYLLABLE_RE_FR;
+}
 
 function wordKeyRegex(pack: PackId): RegExp {
   const ids = getPackContent(pack).words.map((w) => w.id).join("|");
@@ -62,7 +69,7 @@ function packAchievements(
   customVisited: boolean,
 ): Achievement[] {
   const { xp, completed } = progress;
-  const syllableKeys = countMatching(completed, SYLLABLE_RE);
+  const syllableKeys = countMatching(completed, syllableRegex(pack));
   const wordKeys = countMatching(completed, wordKeyRegex(pack));
   const phraseKeys = countMatching(completed, phraseKeyRegex(pack));
   const recallBonus = countPrefix(completed, "reps-recall-");
@@ -80,50 +87,76 @@ function packAchievements(
     },
     {
       id: "shapes-all",
-      title: "Maître des formes",
-      description: "Les 8 configurations de doigts",
+      title: pack === "en" ? "Handshape master" : "Maître des formes",
+      description:
+        pack === "en"
+          ? "All 8 English CS handshapes"
+          : "Les 8 configurations de doigts",
       unlocked: hasAll(completed, SHAPE_IDS),
     },
     {
       id: "positions-all",
-      title: "Cartographe",
-      description: "Les 5 zones du visage",
-      unlocked: hasAll(completed, POS_IDS),
+      title: pack === "en" ? "Placement pro" : "Cartographe",
+      description:
+        pack === "en"
+          ? "Mouth, chin, throat & side"
+          : "Les 5 zones du visage",
+      unlocked:
+        pack === "en"
+          ? hasAll(completed, [
+              "pos-side",
+              "pos-chin",
+              "pos-mouth",
+              "pos-throat",
+            ])
+          : hasAll(completed, POS_IDS),
     },
     {
       id: "syllables-5",
-      title: "Syllabeur",
-      description: "Valider 5 syllabes",
+      title: pack === "en" ? "Syllable starter" : "Syllabeur",
+      description:
+        pack === "en" ? "Cue 5 syllables" : "Valider 5 syllabes",
       unlocked: syllableKeys >= 5,
     },
     {
       id: "syllables-all",
-      title: "Clé complète",
-      description: "Presque toutes les syllabes (≥ 18)",
-      unlocked: syllableKeys >= 18,
+      title: pack === "en" ? "Cue complete" : "Clé complète",
+      description:
+        pack === "en"
+          ? "Most syllables (≥ 14)"
+          : "Presque toutes les syllabes (≥ 18)",
+      unlocked: syllableKeys >= (pack === "en" ? 14 : 18),
     },
     {
       id: "words-5",
-      title: pack === "ch" ? "Vocab’helvète" : "Vocabul’air",
-      description: "Au moins 5 clés de mots",
+      title: pack === "en" ? "Wordsmith" : "Vocabul’air",
+      description:
+        pack === "en" ? "At least 5 word cues" : "Au moins 5 clés de mots",
       unlocked: wordKeys >= 5,
     },
     {
       id: "words-12",
-      title: pack === "ch" ? "Romand" : "Lexique solide",
-      description: "Au moins 12 clés de mots",
+      title: pack === "en" ? "Lexicon" : "Lexique solide",
+      description:
+        pack === "en" ? "At least 12 word cues" : "Au moins 12 clés de mots",
       unlocked: wordKeys >= 12,
     },
     {
       id: "phrases-1",
-      title: "Première phrase",
-      description: "Valider une clé de phrase",
+      title: pack === "en" ? "First phrase" : "Première phrase",
+      description:
+        pack === "en"
+          ? "Validate a phrase cue"
+          : "Valider une clé de phrase",
       unlocked: phraseKeys >= 1,
     },
     {
       id: "phrases-pro",
-      title: pack === "ch" ? "Causeur du lac" : "Conteur",
-      description: "Enchaîner 8 clés de phrases",
+      title: pack === "en" ? "Storyteller" : "Conteur",
+      description:
+        pack === "en"
+          ? "Chain 8 phrase cues"
+          : "Enchaîner 8 clés de phrases",
       unlocked: phraseKeys >= 8,
     },
     {
@@ -203,37 +236,31 @@ function packAchievements(
     },
   ];
 
-  if (pack === "ch") {
+  if (pack === "en") {
     shared.push(
       {
-        id: "ch-natel",
-        title: "Natel en poche",
-        description: "Coder le mot « natel »",
-        unlocked: completed.some((id) => id.startsWith("natel")),
+        id: "en-hello",
+        title: "Hello!",
+        description: "Cue the word « hello »",
+        unlocked: completed.some((id) => id.startsWith("hello")),
       },
       {
-        id: "ch-huitante",
-        title: "Huitante",
-        description: "Valider « huitante » ou la phrase",
-        unlocked: completed.some(
-          (id) => id.startsWith("huitante") || id.startsWith("huitante-francs"),
-        ),
+        id: "en-thank-you",
+        title: "Polite cue",
+        description: "Cue « Thank you »",
+        unlocked: completed.some((id) => id.startsWith("thank-you")),
       },
       {
-        id: "ch-fondue",
-        title: "Fondue party",
-        description: "Coder fondue (mot ou phrase)",
-        unlocked: completed.some(
-          (id) => id.startsWith("fondue") || id.startsWith("fondue-ce-soir"),
-        ),
+        id: "en-love",
+        title: "Love cue",
+        description: "Cue « I love you »",
+        unlocked: completed.some((id) => id.startsWith("i-love-you")),
       },
       {
-        id: "ch-lac",
-        title: "Bord du lac",
-        description: "Valider lac / « On va au lac »",
-        unlocked: completed.some(
-          (id) => id === "lac" || id.startsWith("au-lac"),
-        ),
+        id: "en-good-night",
+        title: "Night owl",
+        description: "Cue « Good night »",
+        unlocked: completed.some((id) => id.startsWith("good-night")),
       },
     );
   } else {

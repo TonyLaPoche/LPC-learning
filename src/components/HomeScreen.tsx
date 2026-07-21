@@ -54,10 +54,11 @@ export function HomeScreen({
 
       <section>
         <h2 className="mb-2 font-display text-lg font-bold text-foam">
-          Pack linguistique
+          Système / langue
         </h2>
         <p className="mb-3 text-sm text-mist">
-          Même code gestuel LPC — vocabulaire et succès séparés par pack.
+          LPC français et Cued Speech anglais ont des tables différentes —
+          progression et succès séparés.
         </p>
         <div className="grid grid-cols-2 gap-2">
           {PACKS.map((p) => {

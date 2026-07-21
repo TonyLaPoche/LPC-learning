@@ -4,6 +4,8 @@
  */
 
 import type { HandshapeId, PositionId } from "@/data/lpc-fr";
+import type { PackId } from "@/data/packs";
+import { textToCuesEn } from "@/lib/textToCuesEn";
 
 export type CueToken = {
   syllable: string;
@@ -237,4 +239,11 @@ export function textToCues(text: string): TextToCuesResult {
     words,
     warnings,
   };
+}
+
+export function textToCuesForPack(
+  pack: PackId,
+  text: string,
+): TextToCuesResult {
+  return pack === "en" ? textToCuesEn(text) : textToCues(text);
 }
