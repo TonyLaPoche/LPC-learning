@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { AboutPage } from "@/components/AboutPage";
 import { AppShell, type AppPage } from "@/components/AppShell";
+import { BuyMeCoffeeWidget } from "@/components/BuyMeCoffeeWidget";
 import { CustomPhraseArena } from "@/components/CustomPhraseArena";
 import { FreePlayArena } from "@/components/FreePlayArena";
 import { HomeScreen } from "@/components/HomeScreen";
@@ -48,58 +49,62 @@ export default function App() {
   const inPractice = screen === "practice";
 
   return (
-    <AppShell
-      compact={inPractice}
-      activePage={page}
-      onNavigate={browse}
-      onHome={goHome}
-      headerRight={
-        <button
-          type="button"
-          onClick={() => browse("profile")}
-          className="rounded-full border border-panel-2/80 bg-panel/70 px-3 py-1.5 text-xs text-mist transition hover:border-teal/40 hover:text-foam"
-          title="Voir le profil"
-        >
-          <span className="mr-1.5 text-[10px] uppercase text-sky">{pack}</span>
-          <span className="text-teal">{progress.xp}</span> XP
-        </button>
-      }
-    >
-      {inPractice ? (
-        track === "free" ? (
-          <FreePlayArena onExit={goHome} />
-        ) : track === "custom" ? (
-          <CustomPhraseArena
-            pack={pack}
-            onExit={goHome}
-            onProgress={refreshProgress}
-          />
+    <>
+      <AppShell
+        compact={inPractice}
+        activePage={page}
+        onNavigate={browse}
+        onHome={goHome}
+        headerRight={
+          <button
+            type="button"
+            onClick={() => browse("profile")}
+            className="rounded-full border border-panel-2/80 bg-panel/70 px-3 py-1.5 text-xs text-mist transition hover:border-teal/40 hover:text-foam"
+            title="Voir le profil"
+          >
+            <span className="mr-1.5 text-[10px] uppercase text-sky">{pack}</span>
+            <span className="text-teal">{progress.xp}</span> XP
+          </button>
+        }
+      >
+        {inPractice ? (
+          track === "free" ? (
+            <FreePlayArena onExit={goHome} />
+          ) : track === "custom" ? (
+            <CustomPhraseArena
+              pack={pack}
+              onExit={goHome}
+              onProgress={refreshProgress}
+            />
+          ) : (
+            <PracticeArena
+              track={track}
+              pack={pack}
+              onExit={goHome}
+              onProgress={refreshProgress}
+            />
+          )
+        ) : page === "about" ? (
+          <AboutPage />
+        ) : page === "support" ? (
+          <SupportPage />
+        ) : page === "profile" ? (
+          <ProfilePage progress={progress} pack={pack} />
         ) : (
-          <PracticeArena
-            track={track}
+          <HomeScreen
+            progress={progress}
             pack={pack}
-            onExit={goHome}
-            onProgress={refreshProgress}
+            onPackChange={changePack}
+            onStart={(t) => {
+              if (t === "free") markFreeVisited();
+              setTrack(t);
+              setScreen("practice");
+            }}
           />
-        )
-      ) : page === "about" ? (
-        <AboutPage />
-      ) : page === "support" ? (
-        <SupportPage />
-      ) : page === "profile" ? (
-        <ProfilePage progress={progress} pack={pack} />
-      ) : (
-        <HomeScreen
-          progress={progress}
-          pack={pack}
-          onPackChange={changePack}
-          onStart={(t) => {
-            if (t === "free") markFreeVisited();
-            setTrack(t);
-            setScreen("practice");
-          }}
-        />
-      )}
-    </AppShell>
+        )}
+      </AppShell>
+      {/* Masqué en pratique caméra pour ne pas gêner les contrôles */}
+      <BuyMeCoffeeWidget enabled={!inPractice} />
+    </>
   );
 }
