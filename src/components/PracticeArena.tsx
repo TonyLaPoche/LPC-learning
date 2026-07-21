@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   HANDSHAPES,
   POSITIONS,
+  PHRASE_DRILLS,
   SYLLABLE_DRILLS,
   WORD_DRILLS,
   handshapeById,
@@ -16,7 +17,7 @@ import { useLpcVision } from "@/hooks/useLpcVision";
 import { addXp, markCompleted, loadFaceZoom, saveFaceZoom, FACE_ZOOM_MIN, FACE_ZOOM_MAX } from "@/lib/progress";
 
 type PracticeArenaProps = {
-  track: LessonTrack;
+  track: Exclude<LessonTrack, "free">;
   onExit: () => void;
   onProgress: () => void;
 };
@@ -29,7 +30,7 @@ type Step = {
   position: PositionId | null;
 };
 
-function buildSteps(track: LessonTrack): Step[] {
+function buildSteps(track: Exclude<LessonTrack, "free">): Step[] {
   if (track === "shapes") {
     return HANDSHAPES.map((h) => ({
       id: `shape-${h.id}`,
@@ -56,6 +57,21 @@ function buildSteps(track: LessonTrack): Step[] {
       handshape: s.cue.handshape,
       position: s.cue.position,
     }));
+  }
+  if (track === "phrases") {
+    const steps: Step[] = [];
+    for (const p of PHRASE_DRILLS) {
+      p.keys.forEach((k, i) => {
+        steps.push({
+          id: `${p.id}-${i}`,
+          title: `${p.phrase} · ${k.syllable}`,
+          subtitle: `Clé ${i + 1}/${p.keys.length}`,
+          handshape: k.handshape,
+          position: k.position,
+        });
+      });
+    }
+    return steps;
   }
   const steps: Step[] = [];
   for (const w of WORD_DRILLS) {

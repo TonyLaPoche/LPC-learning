@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { FreePlayArena } from "@/components/FreePlayArena";
 import { HomeScreen } from "@/components/HomeScreen";
 import { PracticeArena } from "@/components/PracticeArena";
 import type { LessonTrack } from "@/data/lpc-fr";
@@ -13,6 +14,11 @@ export default function App() {
   const refreshProgress = useCallback(() => {
     setProgress(loadProgress());
   }, []);
+
+  const goHome = () => {
+    refreshProgress();
+    setScreen("home");
+  };
 
   return (
     <AppShell
@@ -31,13 +37,12 @@ export default function App() {
             setScreen("practice");
           }}
         />
+      ) : track === "free" ? (
+        <FreePlayArena onExit={goHome} />
       ) : (
         <PracticeArena
           track={track}
-          onExit={() => {
-            refreshProgress();
-            setScreen("home");
-          }}
+          onExit={goHome}
           onProgress={refreshProgress}
         />
       )}
