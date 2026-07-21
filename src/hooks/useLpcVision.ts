@@ -1,0 +1,280 @@
+import { useEffect, useRef, useState } from "react";
+import type { HandshapeId, PositionId } from "@/data/lpc-fr";
+import { classifyCuePosition, faceAnchors } from "@/lib/cuePosition";
+import {
+  clearCanvas,
+  drawFaceZones,
+  drawHandSkeleton,
+  drawPalmMarker,
+} from "@/lib/drawVision";
+import { classifyHandshape } from "@/lib/handshape";
+import {
+  isMobilePerfProfile,
+  visionPerfProfile,
+} from "@/lib/devicePerf";
+import {
+  FaceLandmarker,
+  FilesetResolver,
+  HandLandmarker,
+  type NormalizedLandmark,
+} from "@mediapipe/tasks-vision";
+
+const WASM_URL =
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.32/wasm";
+const HAND_MODEL =
+  "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+const FACE_MODEL =
+  "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+
+export type VisionStatus =
+  | "idle"
+  | "loading"
+  | "ready"
+  | "tracking"
+  | "no-hand"
+  | "error";
+
+export type LpcVisionReading = {
+  handshape: HandshapeId | null;
+  handConfidence: number;
+  position: PositionId | null;
+  positionConfidence: number;
+  matchHand: boolean;
+  matchPosition: boolean;
+  matchAll: boolean;
+};
+
+type Target = {
+  handshape: HandshapeId | null;
+  position: PositionId | null;
+};
+
+export function useLpcVision(opts: {
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  cameraReady: boolean;
+  target: Target;
+  enabled: boolean;
+}) {
+  const { videoRef, canvasRef, cameraReady, target, enabled } = opts;
+  const [status, setStatus] = useState<VisionStatus>("idle");
+  const [modelsReady, setModelsReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reading, setReading] = useState<LpcVisionReading>({
+    handshape: null,
+    handConfidence: 0,
+    position: null,
+    positionConfidence: 0,
+    matchHand: false,
+    matchPosition: false,
+    matchAll: false,
+  });
+
+  const handRef = useRef<HandLandmarker | null>(null);
+  const faceRef = useRef<FaceLandmarker | null>(null);
+  const rafRef = useRef(0);
+  const lastHandTs = useRef(0);
+  const lastFaceTs = useRef(0);
+  const handLmRef = useRef<NormalizedLandmark[] | null>(null);
+  const faceLmRef = useRef<NormalizedLandmark[] | null>(null);
+  const targetRef = useRef(target);
+  targetRef.current = target;
+
+  useEffect(() => {
+    if (!enabled || !cameraReady) {
+      setModelsReady(false);
+      setStatus("idle");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function init() {
+      setStatus("loading");
+      setModelsReady(false);
+      setError(null);
+      try {
+        const mobile = isMobilePerfProfile();
+        const perf = visionPerfProfile(mobile);
+        const vision = await FilesetResolver.forVisionTasks(WASM_URL);
+        if (cancelled) return;
+
+        handRef.current = await HandLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: HAND_MODEL,
+            delegate: "GPU",
+          },
+          runningMode: "VIDEO",
+          numHands: 1,
+          minHandDetectionConfidence: perf.handDetection,
+          minHandPresenceConfidence: perf.handPresence,
+          minTrackingConfidence: perf.handTracking,
+        });
+
+        faceRef.current = await FaceLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: FACE_MODEL,
+            delegate: "GPU",
+          },
+          runningMode: "VIDEO",
+          numFaces: 1,
+          minFaceDetectionConfidence: 0.4,
+          minFacePresenceConfidence: 0.4,
+          minTrackingConfidence: 0.4,
+        });
+
+        if (cancelled) return;
+        setStatus("ready");
+        setModelsReady(true);
+      } catch (e) {
+        const msg =
+          e instanceof Error ? e.message : "Erreur chargement MediaPipe";
+        setError(msg);
+        setStatus("error");
+        setModelsReady(false);
+      }
+    }
+
+    void init();
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(rafRef.current);
+      handRef.current?.close();
+      faceRef.current?.close();
+      handRef.current = null;
+      faceRef.current = null;
+      setModelsReady(false);
+    };
+  }, [enabled, cameraReady]);
+
+  useEffect(() => {
+    if (!enabled || !cameraReady || !modelsReady) return;
+
+    const mobile = isMobilePerfProfile();
+    const perf = visionPerfProfile(mobile);
+    let alive = true;
+
+    const loop = () => {
+      if (!alive) return;
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const hand = handRef.current;
+      const face = faceRef.current;
+      if (!video || !canvas || !hand || !face || video.readyState < 2) {
+        rafRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
+      const now = performance.now();
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      if (!vw || !vh) {
+        rafRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
+      const scale = Math.min(1, perf.maxCanvasWidth / vw);
+      const cw = Math.round(vw * scale);
+      const ch = Math.round(vh * scale);
+      if (canvas.width !== cw || canvas.height !== ch) {
+        canvas.width = cw;
+        canvas.height = ch;
+      }
+
+      if (now - lastHandTs.current >= perf.handIntervalMs) {
+        lastHandTs.current = now;
+        const hr = hand.detectForVideo(video, now);
+        handLmRef.current = hr.landmarks?.[0] ?? null;
+      }
+
+      if (now - lastFaceTs.current >= perf.faceIntervalMs) {
+        lastFaceTs.current = now;
+        const fr = face.detectForVideo(video, now);
+        faceLmRef.current = fr.faceLandmarks?.[0] ?? null;
+      }
+
+      const handLm = handLmRef.current;
+      const faceLm = faceLmRef.current;
+      const shape = classifyHandshape(handLm);
+      const pos = classifyCuePosition(handLm, faceLm);
+      const t = targetRef.current;
+      const matchHand =
+        t.handshape == null ||
+        (shape.id !== null &&
+          shape.id === t.handshape &&
+          shape.confidence >= 0.6);
+      const matchPosition =
+        t.position == null ||
+        (pos.id !== null &&
+          pos.id === t.position &&
+          pos.confidence >= 0.35);
+      const matchAll =
+        (t.handshape != null || t.position != null) &&
+        matchHand &&
+        matchPosition &&
+        handLm != null;
+
+      const nextReading: LpcVisionReading = {
+        handshape: shape.id,
+        handConfidence: shape.confidence,
+        position: pos.id,
+        positionConfidence: pos.confidence,
+        matchHand,
+        matchPosition,
+        matchAll,
+      };
+
+      setReading((prev) => {
+        if (
+          prev.handshape === nextReading.handshape &&
+          prev.position === nextReading.position &&
+          prev.matchHand === nextReading.matchHand &&
+          prev.matchPosition === nextReading.matchPosition &&
+          prev.matchAll === nextReading.matchAll &&
+          Math.abs(prev.handConfidence - nextReading.handConfidence) < 0.05 &&
+          Math.abs(prev.positionConfidence - nextReading.positionConfidence) <
+            0.05
+        ) {
+          return prev;
+        }
+        return nextReading;
+      });
+
+      const nextStatus: VisionStatus = handLm ? "tracking" : "no-hand";
+      setStatus((prev) => (prev === nextStatus ? prev : nextStatus));
+
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        clearCanvas(ctx, cw, ch);
+        const anchors = faceAnchors(faceLm);
+        if (anchors) {
+          drawFaceZones(
+            ctx,
+            anchors,
+            cw,
+            ch,
+            t.position ?? pos.id,
+            perf.liteDraw,
+          );
+        }
+        if (handLm) {
+          drawHandSkeleton(ctx, handLm, cw, ch);
+          if (pos.palm) {
+            drawPalmMarker(ctx, pos.palm, cw, ch, matchAll);
+          }
+        }
+      }
+
+      rafRef.current = requestAnimationFrame(loop);
+    };
+
+    rafRef.current = requestAnimationFrame(loop);
+    return () => {
+      alive = false;
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, [enabled, cameraReady, modelsReady, videoRef, canvasRef]);
+
+  return { status, error, reading };
+}

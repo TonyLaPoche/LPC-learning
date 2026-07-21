@@ -1,0 +1,10 @@
+{
+  "c1": { "file": "c1.jpg", "source": "Wikimedia Commons — File:LSF LettreB.jpg", "license": "see commons page", "note": "LSF B ≈ 4 doigts joints (LPC c1)" },
+  "c2": { "file": "c2.jpg", "source": "Wikimedia Commons — File:LSF LettreD.jpg", "license": "see commons page", "note": "LSF D ≈ index (LPC c2)" },
+  "c3": { "file": "c3.jpg", "source": "Wikimedia Commons — File:LSF LettreU.jpg", "license": "see commons page", "note": "LSF U ≈ index+majeur (LPC c3)" },
+  "c4": { "file": "c4.jpg", "source": "Wikimedia Commons — File:LSF LettreW.jpg", "license": "see commons page", "note": "LSF W ≈ 3 doigts (LPC c4)" },
+  "c5": { "file": "c5.jpg", "source": "Generated educational reference", "note": "4 doigts écartés (LPC c5)" },
+  "c6": { "file": "c6.jpg", "source": "Wikimedia Commons — File:LSF LettreA.jpg", "license": "see commons page", "note": "LSF A ≈ poing (LPC c6)" },
+  "c7": { "file": "c7.jpg", "source": "Generated educational reference", "note": "pouce+index (LPC c7)" },
+  "c8": { "file": "c8.jpg", "source": "Generated educational reference", "note": "pouce+index+majeur (LPC c8)" }
+}
