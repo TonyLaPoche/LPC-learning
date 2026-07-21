@@ -35,6 +35,45 @@ export function palmCenter(landmarks: NormalizedLandmark[]): Point {
   return { x: (wrist.x + middle.x) / 2, y: (wrist.y + middle.y) / 2 };
 }
 
+/** Bouts de doigts MediaPipe (pouce → auriculaire). */
+const FINGER_TIPS = [4, 8, 12, 16, 20] as const;
+
+/**
+ * Pointeur LPC : bout du doigt le plus haut à l’écran (y min).
+ * Préfère les doigts étendus ; sinon tous les tips.
+ */
+export function highestFingerTip(landmarks: NormalizedLandmark[]): Point {
+  const state = fingerState(landmarks);
+  const extendedFlags = [
+    state.thumb,
+    state.index,
+    state.middle,
+    state.ring,
+    state.pinky,
+  ];
+  const anyExtended = extendedFlags.some(Boolean);
+
+  let best: Point | null = null;
+  let bestY = Infinity;
+
+  for (let i = 0; i < FINGER_TIPS.length; i++) {
+    if (anyExtended && !extendedFlags[i]) continue;
+    const tip = landmarks[FINGER_TIPS[i]!];
+    if (!tip) continue;
+    if (tip.y < bestY) {
+      bestY = tip.y;
+      best = { x: tip.x, y: tip.y };
+    }
+  }
+
+  if (best) return best;
+
+  // Fallback : tip du majeur, sinon centre paume
+  const mid = landmarks[12];
+  if (mid) return { x: mid.x, y: mid.y };
+  return palmCenter(landmarks);
+}
+
 export function dist(a: Point, b: Point): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }

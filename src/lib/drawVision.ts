@@ -96,14 +96,14 @@ export function drawFaceZones(
   }
 }
 
-export function drawPalmMarker(
+export function drawPointerMarker(
   ctx: CanvasRenderingContext2D,
-  palm: Point,
+  pointer: Point,
   w: number,
   h: number,
   ok: boolean,
 ) {
-  const p = toPx(palm, w, h);
+  const p = toPx(pointer, w, h);
   ctx.beginPath();
   ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
   ctx.fillStyle = ok ? "rgba(52, 211, 153, 0.95)" : "rgba(251, 113, 133, 0.9)";

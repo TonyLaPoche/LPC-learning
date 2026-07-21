@@ -5,7 +5,7 @@ import {
   clearCanvas,
   drawFaceZones,
   drawHandSkeleton,
-  drawPalmMarker,
+  drawPointerMarker,
 } from "@/lib/drawVision";
 import { classifyHandshape } from "@/lib/handshape";
 import {
@@ -260,8 +260,8 @@ export function useLpcVision(opts: {
         }
         if (handLm) {
           drawHandSkeleton(ctx, handLm, cw, ch);
-          if (pos.palm) {
-            drawPalmMarker(ctx, pos.palm, cw, ch, matchAll);
+          if (pos.pointer) {
+            drawPointerMarker(ctx, pos.pointer, cw, ch, matchAll);
           }
         }
       }
