@@ -28,6 +28,28 @@ const VOWEL_RULES: Array<{ g: string; pos: PositionId }> = [
   { g: "eim", pos: "chin" },
   { g: "oin", pos: "chin" },
   { g: "ien", pos: "chin" },
+  // Nasales orthographiques avec t/d souvent muets (comment, grand…)
+  { g: "ent", pos: "chin" },
+  { g: "ant", pos: "chin" },
+  { g: "ont", pos: "cheek" },
+  { g: "int", pos: "chin" },
+  { g: "unt", pos: "chin" },
+  { g: "and", pos: "chin" },
+  { g: "end", pos: "chin" },
+  { g: "ond", pos: "cheek" },
+  // espèce(s) : /ɛs.pɛs/ → és + pèce(s), pas é|spè|ce
+  { g: "èces", pos: "mouth" },
+  { g: "èce", pos: "mouth" },
+  { g: "eces", pos: "mouth" },
+  { g: "ece", pos: "mouth" },
+  { g: "és", pos: "mouth" },
+  { g: "ès", pos: "mouth" },
+  { g: "es", pos: "mouth" },
+  // pour / jour / soir : r en coda avec la voyelle (pas pou|rquoi)
+  { g: "our", pos: "side" },
+  { g: "oir", pos: "side" },
+  { g: "eur", pos: "cheek" },
+  { g: "aur", pos: "side" },
   { g: "an", pos: "chin" },
   { g: "en", pos: "chin" },
   { g: "am", pos: "chin" },
@@ -67,7 +89,8 @@ const VOWEL_RULES: Array<{ g: string; pos: PositionId }> = [
   { g: "u", pos: "cheek" },
   { g: "y", pos: "mouth" },
 ];
-
+/** Consonnes finales souvent muettes (hors liaison). */
+const MUTE_FINAL = new Set(["t", "d", "s", "x", "z"]);
 const CONS_RULES: Array<{ g: string; shape: HandshapeId }> = [
   { g: "ch", shape: "c7" },
   { g: "gn", shape: "c4" },
@@ -126,11 +149,28 @@ function consonantAt(
 function vowelAt(
   word: string,
   i: number,
+  onsetLen = 0,
 ): { pos: PositionId; len: number; g: string } | null {
   for (const r of VOWEL_RULES) {
-    if (word.startsWith(r.g, i)) {
-      return { pos: r.pos, len: r.g.length, g: r.g };
+    if (!word.startsWith(r.g, i)) continue;
+    // « vraiment » : préférer ai + ent plutôt que aim + ent
+    if (
+      (r.g === "aim" ||
+        r.g === "ain" ||
+        r.g === "eim" ||
+        r.g === "ein") &&
+      word.startsWith("ent", i + r.g.length)
+    ) {
+      continue;
     }
+    // « es/és/ès » seulement en tête de syllabe (espèce), pas dans « mesure »
+    if (
+      (r.g === "es" || r.g === "és" || r.g === "ès") &&
+      onsetLen > 0
+    ) {
+      continue;
+    }
+    return { pos: r.pos, len: r.g.length, g: r.g };
   }
   return null;
 }
@@ -142,6 +182,12 @@ function stripMuteE(word: string): string {
   if ("aeiouyàâéèêëïîôùûü".includes(before)) return word;
   // e muet final fréquent
   return word.slice(0, -1);
+}
+
+/** Ignore une consonne finale typiquement muette (ex. t de comment). */
+function isMuteFinalCluster(onset: string, atEnd: boolean): boolean {
+  if (!atEnd || !onset) return false;
+  return [...onset].every((ch) => MUTE_FINAL.has(ch));
 }
 
 function cueWord(raw: string): CueToken[] {
@@ -162,12 +208,15 @@ function cueWord(raw: string): CueToken[] {
       shape = c.shape;
       onset += c.g;
       i += c.len;
-      // garder la dernière consonne de l’attaque pour la forme
     }
 
-    const v = vowelAt(word, i);
+    const v = vowelAt(word, i, onset.length);
     if (!v) {
-      // consonne orpheline : schwa pédagogique
+      const atEnd = i >= word.length;
+      // Ex. t final de « comment » déjà couvert par « ent », ou orphelin muet
+      if (onset && isMuteFinalCluster(onset, atEnd)) {
+        continue;
+      }
       if (onset) {
         keys.push({
           syllable: onset,
@@ -175,13 +224,12 @@ function cueWord(raw: string): CueToken[] {
           position: "throat",
         });
       } else {
-        i += 1; // caractère inconnu
+        i += 1;
       }
       continue;
     }
 
     const syllable = onset + v.g;
-    // oi pédagogique : forme w (c7)
     const handshape: HandshapeId =
       v.g === "oi" ? "c7" : onset ? shape : "c6";
 
