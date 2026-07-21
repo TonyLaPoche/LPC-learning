@@ -1,4 +1,5 @@
 const STORAGE_KEY = "cle-lpc-progress-v1";
+const ZOOM_KEY = "cle-lpc-face-zoom-v1";
 
 export type ProgressState = {
   xp: number;
@@ -11,6 +12,28 @@ const DEFAULT: ProgressState = {
   completed: [],
   lastPlayedAt: null,
 };
+
+/** Zoom visage : 1 = sans zoom, défaut léger 1.16 */
+export const FACE_ZOOM_MIN = 1;
+export const FACE_ZOOM_MAX = 1.8;
+export const FACE_ZOOM_DEFAULT = 1.16;
+
+export function loadFaceZoom(): number {
+  try {
+    const raw = localStorage.getItem(ZOOM_KEY);
+    if (raw == null) return FACE_ZOOM_DEFAULT;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return FACE_ZOOM_DEFAULT;
+    return Math.min(FACE_ZOOM_MAX, Math.max(FACE_ZOOM_MIN, n));
+  } catch {
+    return FACE_ZOOM_DEFAULT;
+  }
+}
+
+export function saveFaceZoom(zoom: number) {
+  const clamped = Math.min(FACE_ZOOM_MAX, Math.max(FACE_ZOOM_MIN, zoom));
+  localStorage.setItem(ZOOM_KEY, String(clamped));
+}
 
 export function loadProgress(): ProgressState {
   try {

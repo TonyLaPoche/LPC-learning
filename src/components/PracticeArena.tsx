@@ -13,7 +13,7 @@ import {
 import { CueExample } from "@/components/CueExample";
 import { useCamera } from "@/hooks/useCamera";
 import { useLpcVision } from "@/hooks/useLpcVision";
-import { addXp, markCompleted } from "@/lib/progress";
+import { addXp, markCompleted, loadFaceZoom, saveFaceZoom, FACE_ZOOM_MIN, FACE_ZOOM_MAX } from "@/lib/progress";
 
 type PracticeArenaProps = {
   track: LessonTrack;
@@ -80,6 +80,7 @@ export function PracticeArena({ track, onExit, onProgress }: PracticeArenaProps)
   const [holdPct, setHoldPct] = useState(0);
   const [flashOk, setFlashOk] = useState(false);
   const [sessionDone, setSessionDone] = useState(false);
+  const [faceZoom, setFaceZoom] = useState(() => loadFaceZoom());
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const holdAcc = useRef(0);
@@ -272,26 +273,35 @@ export function PracticeArena({ track, onExit, onProgress }: PracticeArenaProps)
         </div>
       )}
 
-      {/* Caméra +15% : ~41–46vh — zoom léger centré visage */}
-      <div className="relative h-[min(41vh,345px)] w-full shrink-0 overflow-hidden rounded-2xl border border-panel-2/80 bg-black sm:h-[min(46vh,390px)]">
+      {/* Caméra — zoom ancré sur le visage (MediaPipe), boîte au ratio natif */}
+      <div className="relative flex h-[min(41vh,345px)] w-full shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-panel-2/80 bg-black sm:h-[min(46vh,390px)]">
         <div
-          className="absolute inset-0"
+          className="relative h-full max-w-full"
           style={{
-            transform: "scale(-1.16, 1.16)",
-            transformOrigin: "50% 38%",
+            aspectRatio:
+              camera.width > 0 && camera.height > 0
+                ? `${camera.width} / ${camera.height}`
+                : "16 / 9",
+            transform: `scale(${faceZoom})`,
+            transformOrigin: `${vision.faceFocus.xPercent}% ${vision.faceFocus.yPercent}%`,
           }}
         >
-          <video
-            ref={videoRef}
-            className="absolute inset-0 h-full w-full object-contain bg-black"
-            playsInline
-            muted
-            autoPlay
-          />
-          <canvas
-            ref={canvasRef}
-            className="pointer-events-none absolute inset-0 h-full w-full object-contain"
-          />
+          <div
+            className="absolute inset-0"
+            style={{ transform: "scaleX(-1)", transformOrigin: "center center" }}
+          >
+            <video
+              ref={videoRef}
+              className="absolute inset-0 h-full w-full bg-black object-fill"
+              playsInline
+              muted
+              autoPlay
+            />
+            <canvas
+              ref={canvasRef}
+              className="pointer-events-none absolute inset-0 h-full w-full"
+            />
+          </div>
         </div>
         {!camera.ready && !camera.error && (
           <div className="absolute inset-0 flex items-center justify-center bg-ink/80 text-sm">
@@ -313,6 +323,34 @@ export function PracticeArena({ track, onExit, onProgress }: PracticeArenaProps)
         )}
       </div>
 
+      <div className="flex shrink-0 items-center gap-2 rounded-xl border border-panel-2/60 bg-panel/50 px-3 py-1.5">
+        <span className="shrink-0 text-[11px] text-mist" aria-hidden>
+          −
+        </span>
+        <label className="sr-only" htmlFor="face-zoom">
+          Zoom visage
+        </label>
+        <input
+          id="face-zoom"
+          type="range"
+          min={FACE_ZOOM_MIN}
+          max={FACE_ZOOM_MAX}
+          step={0.02}
+          value={faceZoom}
+          onChange={(e) => {
+            const z = Number(e.target.value);
+            setFaceZoom(z);
+            saveFaceZoom(z);
+          }}
+          className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-ink accent-teal"
+        />
+        <span className="shrink-0 text-[11px] text-mist" aria-hidden>
+          +
+        </span>
+        <span className="w-10 shrink-0 text-right text-[11px] font-medium text-sky tabular-nums">
+          {Math.round(faceZoom * 100)}%
+        </span>
+      </div>
       {!sessionDone && (
         <div className="flex shrink-0 flex-col gap-1.5">
           <div className="grid grid-cols-3 gap-1.5 text-center text-[11px] sm:text-xs">

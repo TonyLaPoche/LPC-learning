@@ -44,9 +44,22 @@ export type LpcVisionReading = {
   matchAll: boolean;
 };
 
+/** Point de focus zoom (%, espace affiché après miroir horizontal). */
+export type FaceFocus = {
+  xPercent: number;
+  yPercent: number;
+  hasFace: boolean;
+};
+
 type Target = {
   handshape: HandshapeId | null;
   position: PositionId | null;
+};
+
+const DEFAULT_FOCUS: FaceFocus = {
+  xPercent: 50,
+  yPercent: 38,
+  hasFace: false,
 };
 
 export function useLpcVision(opts: {
@@ -69,6 +82,7 @@ export function useLpcVision(opts: {
     matchPosition: false,
     matchAll: false,
   });
+  const [faceFocus, setFaceFocus] = useState<FaceFocus>(DEFAULT_FOCUS);
 
   const handRef = useRef<HandLandmarker | null>(null);
   const faceRef = useRef<FaceLandmarker | null>(null);
@@ -78,6 +92,8 @@ export function useLpcVision(opts: {
   const handLmRef = useRef<NormalizedLandmark[] | null>(null);
   const faceLmRef = useRef<NormalizedLandmark[] | null>(null);
   const targetRef = useRef(target);
+  const focusSmoothRef = useRef({ x: 50, y: 38 });
+  const lastFocusUiTs = useRef(0);
   targetRef.current = target;
 
   useEffect(() => {
@@ -257,6 +273,37 @@ export function useLpcVision(opts: {
             t.position ?? pos.id,
             perf.liteDraw,
           );
+
+          // Focus zoom : nez un peu au-dessus du centre (meilleur cadrage)
+          // Après miroir CSS scaleX(-1), x affiché = 1 - x MediaPipe
+          const rawX = (1 - anchors.nose.x) * 100;
+          const rawY = (anchors.nose.y * 0.55 + anchors.mouth.y * 0.45) * 100;
+          const sm = focusSmoothRef.current;
+          const alpha = 0.18;
+          sm.x += (rawX - sm.x) * alpha;
+          sm.y += (rawY - sm.y) * alpha;
+
+          if (now - lastFocusUiTs.current > 80) {
+            lastFocusUiTs.current = now;
+            const nextFocus: FaceFocus = {
+              xPercent: sm.x,
+              yPercent: sm.y,
+              hasFace: true,
+            };
+            setFaceFocus((prev) => {
+              if (
+                prev.hasFace &&
+                Math.abs(prev.xPercent - nextFocus.xPercent) < 0.4 &&
+                Math.abs(prev.yPercent - nextFocus.yPercent) < 0.4
+              ) {
+                return prev;
+              }
+              return nextFocus;
+            });
+          }
+        } else if (now - lastFocusUiTs.current > 200) {
+          lastFocusUiTs.current = now;
+          setFaceFocus((prev) => (prev.hasFace ? DEFAULT_FOCUS : prev));
         }
         if (handLm) {
           drawHandSkeleton(ctx, handLm, cw, ch);
@@ -276,5 +323,5 @@ export function useLpcVision(opts: {
     };
   }, [enabled, cameraReady, modelsReady, videoRef, canvasRef]);
 
-  return { status, error, reading };
+  return { status, error, reading, faceFocus };
 }
