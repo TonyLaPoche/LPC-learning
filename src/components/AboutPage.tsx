@@ -83,8 +83,8 @@ export function AboutPage() {
           />
         </ul>
         <p className="text-xs text-mist/80">
-          Photos d’exemples de mains : Wikimedia Commons (alphabet LSF, formes
-          proches) + références pédagogiques. Détail dans{" "}
+          Photos d’exemples (formes + positions visage) : références pédagogiques
+          générées, alignées sur le référentiel LfPC. Détail dans{" "}
           <code className="text-teal">public/examples/hands/SOURCES.json</code>.
         </p>
       </section>
