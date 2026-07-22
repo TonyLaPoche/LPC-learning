@@ -58,7 +58,7 @@ const ZONE_LABELS: Record<PositionId, string> = {
   side: "Côté",
   chin: "Menton",
   mouth: "Bouche",
-  cheek: "Joue",
+  cheek: "Pommette",
   throat: "Gorge",
 };
 

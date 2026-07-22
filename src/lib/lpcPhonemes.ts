@@ -1,5 +1,5 @@
 /**
- * Mapping phonème → forme / position LPC FR (pédagogique, inspiré ALPC).
+ * Mapping phonème → forme / position LPC FR (référentiel LfPC / ALPC).
  * Notation ASCII des phonèmes dans le lexique.
  */
 
@@ -11,55 +11,68 @@ export type CueToken = {
   position: PositionId;
 };
 
-/** Consonnes (dernière avant voyelle = forme de la clé) */
+/**
+ * Configs 1–8 (ALPC) :
+ * 1 index · 2 index+majeur · 3 cercle · 4 quatre doigts ·
+ * 5 cinq doigts / ∅ · 6 L · 7 trois doigts · 8 V
+ */
 const CONSONANT_SHAPE: Record<string, HandshapeId> = {
   p: "c1",
   d: "c1",
   Z: "c1", // ʒ
-  t: "c2",
-  m: "c2",
-  f: "c2",
-  k: "c3",
-  n: "c3",
-  l: "c3",
-  R: "c4", // ʁ
-  g: "c4",
-  N: "c4", // ɲ
-  s: "c5",
-  b: "c5",
-  H: "c5", // ɥ
-  v: "c6",
-  z: "c6",
-  S: "c7", // ʃ
-  w: "c7",
+  k: "c2",
+  v: "c2",
+  z: "c2",
+  s: "c3",
+  R: "c3", // ʁ
+  b: "c4",
+  n: "c4",
+  H: "c4", // ɥ
+  m: "c5",
+  t: "c5",
+  f: "c5",
+  l: "c6",
+  S: "c6", // ʃ
+  N: "c6", // ɲ
+  w: "c6",
+  g: "c7", // ɡ
   j: "c8",
+  Ng: "c8", // ŋ (rare en FR)
 };
 
-/** Voyelles → position */
+/** Voyelles → position (ALPC) */
 const VOWEL_POS: Record<string, PositionId> = {
-  u: "side",
+  // Côté
+  a: "side",
   o: "side",
-  O: "side", // ɔ
-  "e~": "chin", // ɛ̃
-  "eu~": "chin", // œ̃
-  "a~": "chin", // ɑ̃
-  i: "mouth",
-  e: "mouth",
-  E: "mouth", // ɛ
-  y: "cheek",
+  "9": "side", // œ
+  "@": "side", // ə
+  // Pommette
+  "e~": "cheek", // ɛ̃
   eu: "cheek", // ø
-  "o~": "cheek", // ɔ̃
-  a: "throat",
-  "@": "throat", // ə
-  A: "throat", // ɑ
+  // Bouche
+  i: "mouth",
+  "o~": "mouth", // ɔ̃
+  "a~": "mouth", // ɑ̃
+  // Menton
+  E: "chin", // ɛ
+  u: "chin",
+  O: "chin", // ɔ
+  // Gorge
+  y: "throat",
+  e: "throat",
+  "eu~": "throat", // œ̃
 };
+
+const EMPTY_SHAPE: HandshapeId = "c5"; // config 5 = aussi voyelle seule
+const GLIDES = new Set(["j", "w", "H"]);
 
 const VOWEL_SET = new Set(Object.keys(VOWEL_POS));
 const CONS_SET = new Set(Object.keys(CONSONANT_SHAPE));
 
 /** Tokens multi-caractères d’abord */
 const PHONE_PATTERN =
-  /e~|eu~|a~|o~|eu|@|[aAEeEiIoOuUy]|[pbtdkgmnNflRsvzZSjwhH]/g;
+  /e~|eu~|a~|o~|eu|Ng|@|9|[aAEeEiIoOuUy]|[pbtdkgmnNflRsvzZSjwhH]/;
 
 export function tokenizePhones(syllablePhones: string): string[] {
   const compact = syllablePhones.replace(/\s+/g, "");
@@ -78,9 +91,23 @@ export function tokenizePhones(syllablePhones: string): string[] {
   return out;
 }
 
+function onsetHandshape(phones: string[], vowelIdx: number): HandshapeId {
+  let fallback: HandshapeId | null = null;
+  for (let i = vowelIdx - 1; i >= 0; i--) {
+    const p = phones[i]!;
+    if (!CONS_SET.has(p)) continue;
+    if (GLIDES.has(p)) {
+      fallback ??= CONSONANT_SHAPE[p]!;
+      continue;
+    }
+    return CONSONANT_SHAPE[p]!;
+  }
+  return fallback ?? EMPTY_SHAPE;
+}
+
 /**
  * Une syllabe phonétique → une clé LPC.
- * Ex. ["p","u","R"] → pour (forme p, position u) ; coda R ignorée pour la forme.
+ * Ex. ["p","a"] → pa (index + côté) ; coda ignorée pour la forme.
  */
 export function syllablePhonesToCue(
   phones: string[],
@@ -96,7 +123,7 @@ export function syllablePhonesToCue(
     }
   }
 
-  // Consonne seule (coda) → côté
+  // Consonne seule → côté (voyelle ∅)
   if (vowelIdx < 0) {
     const last = [...phones].reverse().find((p) => CONS_SET.has(p));
     if (!last) return null;
@@ -109,25 +136,7 @@ export function syllablePhonesToCue(
 
   const vowel = phones[vowelIdx]!;
   const position = VOWEL_POS[vowel]!;
-
-  // Attaque : dernière consonne avant la voyelle
-  let handshape: HandshapeId = "c6";
-  for (let i = vowelIdx - 1; i >= 0; i--) {
-    const p = phones[i]!;
-    if (CONS_SET.has(p)) {
-      handshape = CONSONANT_SHAPE[p]!;
-      break;
-    }
-  }
-
-  // /wa/ (oi) : souvent codé avec forme w
-  if (
-    vowelIdx > 0 &&
-    phones[vowelIdx - 1] === "w" &&
-    (vowel === "a" || vowel === "A")
-  ) {
-    handshape = "c7";
-  }
+  const handshape = onsetHandshape(phones, vowelIdx);
 
   return {
     syllable: display || phones.join(""),

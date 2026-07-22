@@ -43,7 +43,7 @@ const POS_IDS = [
 ];
 
 const SYLLABLE_RE_FR =
-  /^(pa|da|mi|tu|ma|la|li|ni|ra|ri|si|sa|ba|ou|va|cha|chi|ya|an|on)$/;
+  /^(pa|da|pi|mi|tu|ma|ba|la|li|ni|ra|ri|si|sa|va|ka|cha|chi|ya|ou|an|on|in|é)$/;
 
 const SYLLABLE_RE_EN =
   /^(me|see|to|no|you|go|she|the|hi|bye|yes|be|we|tea|do|so|my|too)$/;
@@ -125,7 +125,7 @@ function packAchievements(
         pack === "en"
           ? "Most syllables (≥ 14)"
           : "Presque toutes les syllabes (≥ 18)",
-      unlocked: syllableKeys >= (pack === "en" ? 14 : 18),
+      unlocked: syllableKeys >= (pack === "en" ? 14 : 20),
     },
     {
       id: "words-5",

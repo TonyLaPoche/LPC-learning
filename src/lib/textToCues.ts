@@ -1,6 +1,7 @@
 /**
  * Texte FR → clés LPC (approximation pédagogique).
  * Pas un équivalent TextCueS / formation certifiante.
+ * Référentiel LfPC / ALPC.
  */
 
 import type { HandshapeId, PositionId } from "@/data/lpc-fr";
@@ -20,102 +21,102 @@ export type TextToCuesResult = {
   fromRules?: number;
 };
 
-/** Voyelles / digraphes → position (plus longs d’abord) */
+const EMPTY_SHAPE: HandshapeId = "c5";
+
+/** Voyelles / digraphes → position (plus longs d’abord) — LfPC */
 const VOWEL_RULES: Array<{ g: string; pos: PositionId }> = [
   { g: "eau", pos: "side" },
-  { g: "ain", pos: "chin" },
-  { g: "ein", pos: "chin" },
-  { g: "aim", pos: "chin" },
-  { g: "eim", pos: "chin" },
-  { g: "oin", pos: "chin" },
-  { g: "ien", pos: "chin" },
-  // Nasales orthographiques avec t/d souvent muets (comment, grand…)
-  { g: "ent", pos: "chin" },
-  { g: "ant", pos: "chin" },
-  { g: "ont", pos: "cheek" },
-  { g: "int", pos: "chin" },
-  { g: "unt", pos: "chin" },
-  { g: "and", pos: "chin" },
-  { g: "end", pos: "chin" },
-  { g: "ond", pos: "cheek" },
-  // espèce(s) : /ɛs.pɛs/ → és + pèce(s), pas é|spè|ce
-  { g: "èces", pos: "mouth" },
-  { g: "èce", pos: "mouth" },
-  { g: "eces", pos: "mouth" },
-  { g: "ece", pos: "mouth" },
-  { g: "és", pos: "mouth" },
-  { g: "ès", pos: "mouth" },
-  { g: "es", pos: "mouth" },
-  // pour / jour / soir : r en coda avec la voyelle (pas pou|rquoi)
-  { g: "our", pos: "side" },
+  { g: "ain", pos: "cheek" },
+  { g: "ein", pos: "cheek" },
+  { g: "aim", pos: "cheek" },
+  { g: "eim", pos: "cheek" },
+  { g: "oin", pos: "cheek" },
+  { g: "ien", pos: "cheek" },
+  { g: "ent", pos: "mouth" },
+  { g: "ant", pos: "mouth" },
+  { g: "ont", pos: "mouth" },
+  { g: "int", pos: "cheek" },
+  { g: "unt", pos: "throat" },
+  { g: "and", pos: "mouth" },
+  { g: "end", pos: "mouth" },
+  { g: "ond", pos: "mouth" },
+  { g: "èces", pos: "chin" },
+  { g: "èce", pos: "chin" },
+  { g: "eces", pos: "chin" },
+  { g: "ece", pos: "chin" },
+  { g: "és", pos: "throat" },
+  { g: "ès", pos: "chin" },
+  { g: "es", pos: "chin" },
+  { g: "our", pos: "chin" },
   { g: "oir", pos: "side" },
-  { g: "eur", pos: "cheek" },
+  { g: "eur", pos: "side" },
   { g: "aur", pos: "side" },
-  { g: "an", pos: "chin" },
-  { g: "en", pos: "chin" },
-  { g: "am", pos: "chin" },
-  { g: "em", pos: "chin" },
-  { g: "in", pos: "chin" },
-  { g: "im", pos: "chin" },
-  { g: "un", pos: "chin" },
-  { g: "um", pos: "chin" },
-  { g: "on", pos: "cheek" },
-  { g: "om", pos: "cheek" },
-  { g: "ou", pos: "side" },
+  { g: "an", pos: "mouth" },
+  { g: "en", pos: "mouth" },
+  { g: "am", pos: "mouth" },
+  { g: "em", pos: "mouth" },
+  { g: "in", pos: "cheek" },
+  { g: "im", pos: "cheek" },
+  { g: "un", pos: "throat" },
+  { g: "um", pos: "throat" },
+  { g: "on", pos: "mouth" },
+  { g: "om", pos: "mouth" },
+  { g: "ou", pos: "chin" },
   { g: "au", pos: "side" },
-  { g: "oi", pos: "throat" }, // /wa/ ≈ w+a pédagogique
+  { g: "oi", pos: "side" }, // /wa/ → a côté, forme w
   { g: "ui", pos: "mouth" },
   { g: "eu", pos: "cheek" },
-  { g: "œu", pos: "cheek" },
-  { g: "ai", pos: "mouth" },
-  { g: "ei", pos: "mouth" },
-  { g: "ay", pos: "mouth" },
+  { g: "œu", pos: "side" },
+  { g: "ai", pos: "chin" },
+  { g: "ei", pos: "chin" },
+  { g: "ay", pos: "chin" },
   { g: "oy", pos: "side" },
-  { g: "ée", pos: "mouth" },
-  { g: "é", pos: "mouth" },
-  { g: "è", pos: "mouth" },
-  { g: "ê", pos: "mouth" },
-  { g: "ë", pos: "mouth" },
-  { g: "à", pos: "throat" },
-  { g: "â", pos: "throat" },
+  { g: "ée", pos: "throat" },
+  { g: "é", pos: "throat" },
+  { g: "è", pos: "chin" },
+  { g: "ê", pos: "chin" },
+  { g: "ë", pos: "chin" },
+  { g: "à", pos: "side" },
+  { g: "â", pos: "side" },
   { g: "ô", pos: "side" },
   { g: "î", pos: "mouth" },
   { g: "ï", pos: "mouth" },
-  { g: "û", pos: "cheek" },
-  { g: "ù", pos: "cheek" },
-  { g: "a", pos: "throat" },
-  { g: "e", pos: "mouth" },
+  { g: "û", pos: "throat" },
+  { g: "ù", pos: "throat" },
+  { g: "a", pos: "side" },
+  { g: "e", pos: "throat" },
   { g: "i", pos: "mouth" },
   { g: "o", pos: "side" },
-  { g: "u", pos: "cheek" },
+  { g: "u", pos: "throat" }, // /y/ ; « ou » géré plus haut
   { g: "y", pos: "mouth" },
 ];
+
 /** Consonnes finales souvent muettes (hors liaison). */
 const MUTE_FINAL = new Set(["t", "d", "s", "x", "z"]);
 const CONS_RULES: Array<{ g: string; shape: HandshapeId }> = [
-  { g: "ch", shape: "c7" },
-  { g: "gn", shape: "c4" },
-  { g: "qu", shape: "c3" },
-  { g: "ph", shape: "c2" },
-  { g: "gu", shape: "c4" },
-  { g: "ç", shape: "c5" },
+  { g: "ch", shape: "c6" },
+  { g: "gn", shape: "c6" },
+  { g: "qu", shape: "c2" },
+  { g: "ph", shape: "c5" },
+  { g: "gu", shape: "c7" },
+  { g: "ç", shape: "c3" },
   { g: "p", shape: "c1" },
-  { g: "b", shape: "c5" },
-  { g: "t", shape: "c2" },
+  { g: "b", shape: "c4" },
+  { g: "t", shape: "c5" },
   { g: "d", shape: "c1" },
-  { g: "k", shape: "c3" },
-  { g: "m", shape: "c2" },
-  { g: "n", shape: "c3" },
-  { g: "f", shape: "c2" },
-  { g: "v", shape: "c6" },
-  { g: "s", shape: "c5" },
-  { g: "z", shape: "c6" },
-  { g: "l", shape: "c3" },
-  { g: "r", shape: "c4" },
+  { g: "k", shape: "c2" },
+  { g: "m", shape: "c5" },
+  { g: "n", shape: "c4" },
+  { g: "f", shape: "c5" },
+  { g: "v", shape: "c2" },
+  { g: "s", shape: "c3" },
+  { g: "z", shape: "c2" },
+  { g: "l", shape: "c6" },
+  { g: "r", shape: "c3" },
   { g: "j", shape: "c1" },
-  { g: "w", shape: "c7" },
-  { g: "x", shape: "c5" },
-  { g: "h", shape: "c6" },
+  { g: "w", shape: "c6" },
+  { g: "x", shape: "c2" },
+  { g: "h", shape: "c5" },
 ];
 
 function consonantAt(
@@ -127,9 +128,9 @@ function consonantAt(
   if (rest.startsWith("c")) {
     const next = rest[1];
     if (next && "eéiîy".includes(next)) {
-      return { shape: "c5", len: 1, g: "c" };
+      return { shape: "c3", len: 1, g: "c" };
     }
-    return { shape: "c3", len: 1, g: "c" };
+    return { shape: "c2", len: 1, g: "c" };
   }
   // g soft / hard
   if (rest.startsWith("g") && !rest.startsWith("gu") && !rest.startsWith("gn")) {
@@ -137,7 +138,7 @@ function consonantAt(
     if (next && "eéiîy".includes(next)) {
       return { shape: "c1", len: 1, g: "g" };
     }
-    return { shape: "c4", len: 1, g: "g" };
+    return { shape: "c7", len: 1, g: "g" };
   }
   for (const r of CONS_RULES) {
     if (word.startsWith(r.g, i)) {
@@ -154,7 +155,6 @@ function vowelAt(
 ): { pos: PositionId; len: number; g: string } | null {
   for (const r of VOWEL_RULES) {
     if (!word.startsWith(r.g, i)) continue;
-    // « vraiment » : préférer ai + ent plutôt que aim + ent
     if (
       (r.g === "aim" ||
         r.g === "ain" ||
@@ -164,7 +164,6 @@ function vowelAt(
     ) {
       continue;
     }
-    // « es/és/ès » seulement en tête de syllabe (espèce), pas dans « mesure »
     if (
       (r.g === "es" || r.g === "és" || r.g === "ès") &&
       onsetLen > 0
@@ -181,7 +180,6 @@ function stripMuteE(word: string): string {
   if (!word.endsWith("e")) return word;
   const before = word[word.length - 2]!;
   if ("aeiouyàâéèêëïîôùûü".includes(before)) return word;
-  // e muet final fréquent
   return word.slice(0, -1);
 }
 
@@ -200,8 +198,7 @@ function cueWord(raw: string): CueToken[] {
   let i = 0;
 
   while (i < word.length) {
-    // onset consonants
-    let shape: HandshapeId = "c6"; // voyelle seule
+    let shape: HandshapeId = EMPTY_SHAPE;
     let onset = "";
     while (i < word.length) {
       const c = consonantAt(word, i);
@@ -214,7 +211,6 @@ function cueWord(raw: string): CueToken[] {
     const v = vowelAt(word, i, onset.length);
     if (!v) {
       const atEnd = i >= word.length;
-      // Ex. t final de « comment » déjà couvert par « ent », ou orphelin muet
       if (onset && isMuteFinalCluster(onset, atEnd)) {
         continue;
       }
@@ -222,7 +218,7 @@ function cueWord(raw: string): CueToken[] {
         keys.push({
           syllable: onset,
           handshape: shape,
-          position: "throat",
+          position: "side",
         });
       } else {
         i += 1;
@@ -232,7 +228,7 @@ function cueWord(raw: string): CueToken[] {
 
     const syllable = onset + v.g;
     const handshape: HandshapeId =
-      v.g === "oi" ? "c7" : onset ? shape : "c6";
+      v.g === "oi" ? "c6" : onset ? shape : EMPTY_SHAPE;
 
     keys.push({
       syllable,

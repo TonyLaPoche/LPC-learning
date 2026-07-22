@@ -38,30 +38,32 @@ Exemple : *pa / ba / ma* se ressemblent sur les lèvres ; le LPC les différenci
 
 **English Cued Speech** : autre table (8 formes × **4** positions, groupements consonnes/voyelles différents du LPC FR).
 
-## Référentiel MVP (`fr-FR`)
+## Référentiel MVP (`fr-FR`) — LfPC / ALPC
 
 ### Positions (voyelles)
 
-| Id | Zone | Voyelles (ex.) |
-|----|------|----------------|
-| `side` | Côté | u, o, ɔ |
-| `chin` | Menton | ɛ̃, œ̃, ɑ̃ |
-| `mouth` | Bouche | i, e, ɛ |
-| `cheek` | Joue | y, ø, ɔ̃ |
-| `throat` | Gorge | a, ə, ɑ |
+| Id | Zone | Voyelles |
+|----|------|----------|
+| `side` | Côté | a, o, œ, ə (+ consonne seule) |
+| `cheek` | Pommette | ɛ̃, ø |
+| `mouth` | Bouche | i, ɔ̃, ɑ̃ |
+| `chin` | Menton | ɛ, u, ɔ |
+| `throat` | Gorge | y, e, œ̃ |
 
 ### Configurations (consonnes)
 
-| Id | Forme | Consonnes (ex.) |
-|----|-------|-----------------|
-| `c1` | Doigts joints | p, d, ʒ |
-| `c2` | Index | t, m, f |
-| `c3` | Index + majeur | k, n, l |
-| `c4` | Index + majeur + annulaire | ʁ, ɡ, ɲ |
-| `c5` | Quatre doigts | s, b, ɥ |
-| `c6` | Poing | ∅, v, z |
-| `c7` | Pouce + index | ʃ, w |
-| `c8` | Pouce + index + majeur | j |
+| Id | Forme | Consonnes |
+|----|-------|-----------|
+| `c1` | Index | p, d, ʒ |
+| `c2` | Index + majeur | k, v, z |
+| `c3` | Cercle (pouce+index) | s, ʁ |
+| `c4` | Quatre doigts | b, n, ɥ |
+| `c5` | Cinq doigts | m, t, f, ∅ |
+| `c6` | Forme L | l, ʃ, ɲ, w |
+| `c7` | Trois doigts | ɡ |
+| `c8` | Forme V | j, ŋ |
+
+Exemple de contrôle : **pa** = index + côté ; **pi** = index + bouche.
 
 ## Parcours pédagogique MVP
 

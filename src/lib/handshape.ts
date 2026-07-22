@@ -23,36 +23,57 @@ function scoreMatch(f: FingerState, expected: FingerState): number {
   return ok / keys.length;
 }
 
-/** Signatures idéales des 8 configs LPC (approx MediaPipe). */
+/**
+ * Signatures idéales des 8 configs LfPC (approx MediaPipe).
+ * c2/c8 et c3/c6 partagent la même extension de doigts → heuristiques plus bas.
+ */
 const SIGNATURES: Record<HandshapeId, FingerState> = {
-  c1: { thumb: false, index: true, middle: true, ring: true, pinky: true },
-  c2: { thumb: false, index: true, middle: false, ring: false, pinky: false },
-  c3: { thumb: false, index: true, middle: true, ring: false, pinky: false },
-  c4: { thumb: false, index: true, middle: true, ring: true, pinky: false },
-  c5: { thumb: false, index: true, middle: true, ring: true, pinky: true },
-  c6: { thumb: false, index: false, middle: false, ring: false, pinky: false },
-  c7: { thumb: true, index: true, middle: false, ring: false, pinky: false },
-  c8: { thumb: true, index: true, middle: true, ring: false, pinky: false },
+  c1: { thumb: false, index: true, middle: false, ring: false, pinky: false },
+  c2: { thumb: false, index: true, middle: true, ring: false, pinky: false },
+  c3: { thumb: true, index: true, middle: false, ring: false, pinky: false },
+  c4: { thumb: false, index: true, middle: true, ring: true, pinky: true },
+  c5: { thumb: true, index: true, middle: true, ring: true, pinky: true },
+  c6: { thumb: true, index: true, middle: false, ring: false, pinky: false },
+  c7: { thumb: false, index: true, middle: true, ring: true, pinky: false },
+  c8: { thumb: false, index: true, middle: true, ring: false, pinky: false },
 };
 
-/**
- * c1 vs c5 : joints vs écartés — MVP traite les deux comme « quatre doigts ».
- * On préfère c1 si les tips sont proches (doigts joints).
- */
-function preferJoinedOrSpread(
+function palmScale(landmarks: NormalizedLandmark[]): number {
+  return Math.max(
+    1e-4,
+    Math.hypot(
+      landmarks[0]!.x - landmarks[9]!.x,
+      landmarks[0]!.y - landmarks[9]!.y,
+    ),
+  );
+}
+
+/** c2 (jointif) vs c8 (V écarté). */
+function preferVOrTogether(
   landmarks: NormalizedLandmark[],
   base: HandshapeId,
 ): HandshapeId {
-  if (base !== "c1" && base !== "c5") return base;
+  if (base !== "c2" && base !== "c8") return base;
   const i = landmarks[8];
   const m = landmarks[12];
-  const r = landmarks[16];
-  const p = landmarks[20];
-  if (!i || !m || !r || !p) return base;
-  const span =
-    Math.hypot(i.x - p.x, i.y - p.y) /
-    Math.max(1e-4, Math.hypot(landmarks[0]!.x - landmarks[9]!.x, landmarks[0]!.y - landmarks[9]!.y));
-  return span < 0.55 ? "c1" : "c5";
+  if (!i || !m) return base;
+  const span = Math.hypot(i.x - m.x, i.y - m.y) / palmScale(landmarks);
+  return span > 0.28 ? "c8" : "c2";
+}
+
+/** c3 (cercle pouce↔index) vs c6 (L). */
+function preferCircleOrL(
+  landmarks: NormalizedLandmark[],
+  base: HandshapeId,
+): HandshapeId {
+  if (base !== "c3" && base !== "c6") return base;
+  const thumbTip = landmarks[4];
+  const indexTip = landmarks[8];
+  if (!thumbTip || !indexTip) return base;
+  const dist =
+    Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y) /
+    palmScale(landmarks);
+  return dist < 0.22 ? "c3" : "c6";
 }
 
 export function classifyHandshape(
@@ -73,20 +94,21 @@ export function classifyHandshape(
   }
 
   const fingers = fingerState(landmarks);
-  let best: HandshapeId = "c6";
+  let best: HandshapeId = "c5";
   let bestScore = -1;
 
   for (const id of Object.keys(SIGNATURES) as HandshapeId[]) {
     let s = scoreMatch(fingers, SIGNATURES[id]);
-    // c1 et c5 partagent la même signature doigts ; départage plus bas
-    if (id === "c1" || id === "c5") s -= 0.02;
+    // paires ambiguës : léger malus, départage heuristique ensuite
+    if (id === "c2" || id === "c8" || id === "c3" || id === "c6") s -= 0.02;
     if (s > bestScore) {
       bestScore = s;
       best = id;
     }
   }
 
-  best = preferJoinedOrSpread(landmarks, best);
+  best = preferVOrTogether(landmarks, best);
+  best = preferCircleOrL(landmarks, best);
 
   return {
     id: bestScore >= 0.6 ? best : null,

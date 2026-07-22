@@ -1,6 +1,6 @@
 /**
  * Lexique FR : orthographe → syllabes phonétiques (ASCII) + labels d’affichage.
- * Notation : R=ʁ S=ʃ Z=ʒ E=ɛ O=ɔ e~=ɛ̃ a~=ɑ̃ o~=ɔ̃ @=ə H=ɥ N=ɲ eu=ø
+ * Notation : R=ʁ S=ʃ Z=ʒ E=ɛ O=ɔ e~=ɛ̃ a~=ɑ̃ o~=ɔ̃ @=ə H=ɥ N=ɲ eu=ø eu~=œ̃
  * Lookup : accents / apostrophes normalisés via lexiconKeysFor().
  * Couverture : ~933 entrées (MVP étendu).
  */
@@ -15,6 +15,7 @@ export type LexiconEntry = {
 type Row = [string, string, string[]];
 
 const ROWS: Row[] = [
+  ['a', 'a', ['à']],
   ['acheter', 'a S . t e', ['a', 'che']],
   ['ademain', 'a . d @ . m e~', ['à', 'de', 'main']],
   ['aeroport', 'a . e . R O . p O R', ['aé', 'ro', 'port', 'pOR']],
@@ -28,6 +29,7 @@ const ROWS: Row[] = [
   ['ailleurs', 'a . j eu R', ['ail', 'leurs']],
   ['aime', 'E m', ['aime']],
   ['aiment', 'E m', ['aiment']],
+  ['à', 'a', ['à']],
   ['aimer', 'E . m e', ['ai', 'mer']],
   ['aimes', 'E m', ['aimes']],
   ['aimez', 'E . m e', ['ai', 'mez']],
@@ -119,6 +121,7 @@ const ROWS: Row[] = [
   ['bureau', 'b y . R o', ['bu', 'reau']],
   ['bus', 'b y s', ['bus']],
   ['bébé', 'b e . b e', ['bé', 'bé']],
+  ['ca', 's a', ['ça']],
   ['cadeau', 'k a . d o', ['ca', 'deau']],
   ['cafe', 'k a . f e', ['ca', 'fé']],
   ['café', 'k a . f e', ['ca', 'fé']],
@@ -127,6 +130,7 @@ const ROWS: Row[] = [
   ['canape', 'k a . n a . p e', ['ca', 'na', 'pé']],
   ['canapé', 'k a . n a . p e', ['ca', 'na', 'pé']],
   ['canard', 'k a . n a R', ['ca', 'nard']],
+  ['ça', 's a', ['ça']],
   ['car', 'k a R', ['car']],
   ['carte', 'k a R t', ['carte']],
   ['ce', 's @', ['ce']],
@@ -874,6 +878,7 @@ const ROWS: Row[] = [
   ['une', 'y n', ['une']],
   ['utiliser', 'y . t i . l i . z e', ['u', 'ti', 'li', 'ser']],
   ['vache', 'v a S', ['vache']],
+  ['va', 'v a', ['va']],
   ['vais', 'v E', ['vais']],
   ['vas', 'v a', ['vas']],
   ['velo', 'v e . l o', ['vé', 'lo']],
