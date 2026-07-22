@@ -25,7 +25,8 @@ export const CONTENT_FR = {
       word: "bonjour",
       keys: [
         { syllable: "bon", handshape: "c4", position: "mouth" },
-        { syllable: "jour", handshape: "c1", position: "chin" },
+        { syllable: "jou", handshape: "c1", position: "chin" },
+        { syllable: "r", handshape: "c3", position: "side" },
       ],
     },
     {
@@ -185,7 +186,8 @@ export const CONTENT_FR = {
       phrase: "Bonjour !",
       keys: [
         { syllable: "bon", handshape: "c4", position: "mouth" },
-        { syllable: "jour", handshape: "c1", position: "chin" },
+        { syllable: "jou", handshape: "c1", position: "chin" },
+        { syllable: "r", handshape: "c3", position: "side" },
       ],
     },
     {

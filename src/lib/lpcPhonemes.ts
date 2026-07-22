@@ -13,8 +13,8 @@ export type CueToken = {
 
 /**
  * Configs 1–8 (ALPC) :
- * 1 index · 2 index+majeur · 3 cercle · 4 quatre doigts ·
- * 5 cinq doigts / ∅ · 6 L · 7 trois doigts · 8 V
+ * 1 index · 2 index+majeur · 3 trois doigts · 4 quatre doigts ·
+ * 5 cinq doigts / ∅ · 6 L · 7 pouce+2 · 8 V
  */
 const CONSONANT_SHAPE: Record<string, HandshapeId> = {
   p: "c1",

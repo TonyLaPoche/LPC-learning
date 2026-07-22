@@ -43,7 +43,7 @@ const POS_IDS = [
 ];
 
 const SYLLABLE_RE_FR =
-  /^(pa|da|pi|mi|tu|ma|ba|la|li|ni|ra|ri|si|sa|va|ka|cha|chi|ya|ou|an|on|in|é)$/;
+  /^(pa|da|pi|mi|tu|ma|ba|la|li|ni|ra|ri|si|sa|va|ka|ga|cha|chi|ya|ou|an|on|in|é)$/;
 
 const SYLLABLE_RE_EN =
   /^(me|see|to|no|you|go|she|the|hi|bye|yes|be|we|tea|do|so|my|too)$/;

@@ -66,8 +66,8 @@ export const HANDSHAPES: HandshapeDef[] = [
   },
   {
     id: "c3",
-    label: "Cercle",
-    hint: "Pouce et index forment un cercle (autres fermés)",
+    label: "Trois doigts",
+    hint: "Index, majeur et annulaire tendus (auriculaire fermé)",
     consonants: ["s", "ʁ"],
   },
   {
@@ -90,8 +90,8 @@ export const HANDSHAPES: HandshapeDef[] = [
   },
   {
     id: "c7",
-    label: "Trois doigts",
-    hint: "Index, majeur et annulaire tendus",
+    label: "Pouce + 2 doigts",
+    hint: "Pouce écarté, index et majeur tendus jointifs",
     consonants: ["ɡ"],
   },
   {
@@ -211,28 +211,28 @@ export const SYLLABLE_DRILLS: DrillItem[] = [
     label: "Syllabe ra",
     display: "ra",
     cue: { handshape: "c3", position: "side" },
-    tip: "Cercle + côté",
+    tip: "Trois doigts + côté",
   },
   {
     id: "ri",
     label: "Syllabe ri",
     display: "ri",
     cue: { handshape: "c3", position: "mouth" },
-    tip: "Cercle + bouche",
+    tip: "Trois doigts + bouche",
   },
   {
     id: "si",
     label: "Syllabe si",
     display: "si",
     cue: { handshape: "c3", position: "mouth" },
-    tip: "Cercle + bouche",
+    tip: "Trois doigts + bouche",
   },
   {
     id: "sa",
     label: "Syllabe sa",
     display: "sa",
     cue: { handshape: "c3", position: "side" },
-    tip: "Cercle + côté",
+    tip: "Trois doigts + côté",
   },
   {
     id: "va",
@@ -247,6 +247,13 @@ export const SYLLABLE_DRILLS: DrillItem[] = [
     display: "ka",
     cue: { handshape: "c2", position: "side" },
     tip: "Index+majeur + côté",
+  },
+  {
+    id: "ga",
+    label: "Syllabe ga",
+    display: "ga",
+    cue: { handshape: "c7", position: "side" },
+    tip: "Pouce+2 doigts + côté",
   },
   {
     id: "cha",

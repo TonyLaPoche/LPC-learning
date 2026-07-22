@@ -24,17 +24,17 @@ function scoreMatch(f: FingerState, expected: FingerState): number {
 }
 
 /**
- * Signatures idéales des 8 configs LfPC (approx MediaPipe).
- * c2/c8 et c3/c6 partagent la même extension de doigts → heuristiques plus bas.
+ * Signatures idéales des 8 configs LfPC (Montre le son / ALPC).
+ * c2/c8 partagent index+majeur → heuristique d’écartement.
  */
 const SIGNATURES: Record<HandshapeId, FingerState> = {
   c1: { thumb: false, index: true, middle: false, ring: false, pinky: false },
   c2: { thumb: false, index: true, middle: true, ring: false, pinky: false },
-  c3: { thumb: true, index: true, middle: false, ring: false, pinky: false },
+  c3: { thumb: false, index: true, middle: true, ring: true, pinky: false },
   c4: { thumb: false, index: true, middle: true, ring: true, pinky: true },
   c5: { thumb: true, index: true, middle: true, ring: true, pinky: true },
   c6: { thumb: true, index: true, middle: false, ring: false, pinky: false },
-  c7: { thumb: false, index: true, middle: true, ring: true, pinky: false },
+  c7: { thumb: true, index: true, middle: true, ring: false, pinky: false },
   c8: { thumb: false, index: true, middle: true, ring: false, pinky: false },
 };
 
@@ -61,21 +61,6 @@ function preferVOrTogether(
   return span > 0.28 ? "c8" : "c2";
 }
 
-/** c3 (cercle pouce↔index) vs c6 (L). */
-function preferCircleOrL(
-  landmarks: NormalizedLandmark[],
-  base: HandshapeId,
-): HandshapeId {
-  if (base !== "c3" && base !== "c6") return base;
-  const thumbTip = landmarks[4];
-  const indexTip = landmarks[8];
-  if (!thumbTip || !indexTip) return base;
-  const dist =
-    Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y) /
-    palmScale(landmarks);
-  return dist < 0.22 ? "c3" : "c6";
-}
-
 export function classifyHandshape(
   landmarks: NormalizedLandmark[] | null,
 ): HandshapeGuess {
@@ -99,8 +84,7 @@ export function classifyHandshape(
 
   for (const id of Object.keys(SIGNATURES) as HandshapeId[]) {
     let s = scoreMatch(fingers, SIGNATURES[id]);
-    // paires ambiguës : léger malus, départage heuristique ensuite
-    if (id === "c2" || id === "c8" || id === "c3" || id === "c6") s -= 0.02;
+    if (id === "c2" || id === "c8") s -= 0.02;
     if (s > bestScore) {
       bestScore = s;
       best = id;
@@ -108,7 +92,6 @@ export function classifyHandshape(
   }
 
   best = preferVOrTogether(landmarks, best);
-  best = preferCircleOrL(landmarks, best);
 
   return {
     id: bestScore >= 0.6 ? best : null,

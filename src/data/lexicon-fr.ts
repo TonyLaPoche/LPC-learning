@@ -110,7 +110,7 @@ const ROWS: Row[] = [
   ['boire', 'b w a R', ['boire']],
   ['bon', 'b o~', ['bon']],
   ['bonbon', 'b o~ . b o~', ['bon', 'bon']],
-  ['bonjour', 'b o~ . Z u R', ['bon', 'jour']],
+  ['bonjour', 'b o~ . Z u . R', ['bon', 'jou', 'r']],
   ['bonne', 'b O n', ['bonne']],
   ['bonsoir', 'b o~ . s w a R', ['bon', 'soir']],
   ['bouche', 'b u S', ['bouche']],
