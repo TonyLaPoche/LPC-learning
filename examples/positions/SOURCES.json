@@ -1,0 +1,7 @@
+{
+  "side": { "file": "side.jpg", "note": "Côté — a, o, œ, ə" },
+  "cheek": { "file": "cheek.jpg", "note": "Pommette — ɛ̃, ø" },
+  "mouth": { "file": "mouth.jpg", "note": "Bouche — i, ɔ̃, ɑ̃" },
+  "chin": { "file": "chin.jpg", "note": "Menton — ɛ, u, ɔ" },
+  "throat": { "file": "throat.jpg", "note": "Gorge — y, e, œ̃" }
+}

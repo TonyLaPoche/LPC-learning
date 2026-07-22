@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/LPC-learning/sw.js', { scope: '/LPC-learning/' })})}

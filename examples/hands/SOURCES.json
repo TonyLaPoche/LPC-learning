@@ -1,0 +1,19 @@
+{
+  "handshapes": {
+    "c1": { "file": "c1.jpg", "source": "Generated educational reference (LfPC)", "note": "Index — p, d, ʒ" },
+    "c2": { "file": "c2.jpg", "source": "Generated educational reference (LfPC)", "note": "Index + majeur — k, v, z" },
+    "c3": { "file": "c3.jpg", "source": "Generated educational reference (LfPC)", "note": "Trois doigts — s, ʁ" },
+    "c4": { "file": "c4.jpg", "source": "Generated educational reference (LfPC)", "note": "Quatre doigts — b, n, ɥ" },
+    "c5": { "file": "c5.jpg", "source": "Generated educational reference (LfPC)", "note": "Cinq doigts / ∅ — m, t, f" },
+    "c6": { "file": "c6.jpg", "source": "Generated educational reference (LfPC)", "note": "Forme L — l, ʃ, ɲ, w" },
+    "c7": { "file": "c7.jpg", "source": "Generated educational reference (LfPC)", "note": "Pouce + index + majeur — ɡ" },
+    "c8": { "file": "c8.jpg", "source": "Generated educational reference (LfPC)", "note": "Forme V — j, ŋ" }
+  },
+  "positions": {
+    "side": { "file": "../positions/side.jpg", "source": "Generated educational reference (LfPC)", "note": "Côté — a, o, œ, ə" },
+    "cheek": { "file": "../positions/cheek.jpg", "source": "Generated educational reference (LfPC)", "note": "Pommette — ɛ̃, ø" },
+    "mouth": { "file": "../positions/mouth.jpg", "source": "Generated educational reference (LfPC)", "note": "Bouche — i, ɔ̃, ɑ̃" },
+    "chin": { "file": "../positions/chin.jpg", "source": "Generated educational reference (LfPC)", "note": "Menton — ɛ, u, ɔ" },
+    "throat": { "file": "../positions/throat.jpg", "source": "Generated educational reference (LfPC)", "note": "Gorge — y, e, œ̃" }
+  }
+}
