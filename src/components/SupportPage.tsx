@@ -15,14 +15,16 @@ export function SupportPage() {
 
       <section className="space-y-3 rounded-2xl border border-teal/35 bg-teal/10 p-5">
         <h2 className="font-display text-lg font-bold text-teal">
-          Pourquoi un don ?
+          {SUPPORT_COPY.whyTitle}
         </h2>
         <p className="text-sm leading-relaxed text-foam/90">
-          {SUPPORT_COPY.noAds}
+          {SUPPORT_COPY.whyLead}
         </p>
-        <p className="text-sm text-mist">
-          Hébergement, temps de développement, contenus pédagogiques : un café
-          finance concrètement la suite (plus de mots, pack anglais, accessibilité…).
+        <p className="text-sm leading-relaxed text-mist">
+          {SUPPORT_COPY.whyBody}
+        </p>
+        <p className="text-sm leading-relaxed text-foam/85">
+          {SUPPORT_COPY.whyCredits}
         </p>
       </section>
 
@@ -39,15 +41,12 @@ export function SupportPage() {
           </a>
         ) : (
           <p className="mt-4 rounded-xl border border-dashed border-panel-2 px-4 py-3 text-sm text-mist">
-            Lien <strong className="text-foam">Buy me a coffee</strong> à venir —
-            il sera branché dès que tu me le fournis.
+            Lien <strong className="text-foam">Buy me a coffee</strong> à venir.
           </p>
         )}
       </section>
 
-      <p className="text-xs text-mist/80">
-        Pas de pub pour l’instant. L’app vit grâce à la communauté.
-      </p>
+      <p className="text-xs text-mist/80">{SUPPORT_COPY.footer}</p>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { AboutPage } from "@/components/AboutPage";
 import { AppShell, type AppPage } from "@/components/AppShell";
 import { BuyMeCoffeeWidget } from "@/components/BuyMeCoffeeWidget";
 import { CustomPhraseArena } from "@/components/CustomPhraseArena";
+import { FeedbackPage } from "@/components/FeedbackPage";
 import { FreePlayArena } from "@/components/FreePlayArena";
 import { HomeScreen } from "@/components/HomeScreen";
 import { PracticeArena } from "@/components/PracticeArena";
@@ -86,6 +87,8 @@ export default function App() {
           )
         ) : page === "about" ? (
           <AboutPage />
+        ) : page === "feedback" ? (
+          <FeedbackPage pack={pack} />
         ) : page === "support" ? (
           <SupportPage />
         ) : page === "profile" ? (

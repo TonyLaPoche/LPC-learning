@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type AppPage = "home" | "about" | "support" | "profile";
+export type AppPage = "home" | "about" | "support" | "profile" | "feedback";
 
 type AppShellProps = {
   children: ReactNode;
@@ -74,6 +74,11 @@ export function AppShell({
             onClick={() => onNavigate("profile")}
           />
           <NavLink
+            label="Feedback"
+            active={activePage === "feedback"}
+            onClick={() => onNavigate("feedback")}
+          />
+          <NavLink
             label="À propos"
             active={activePage === "about"}
             onClick={() => onNavigate("about")}
@@ -89,7 +94,11 @@ export function AppShell({
       <main>{children}</main>
 
       <p className="mt-10 pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-[10px] text-mist/60">
-        Financé par les dons · sans pub pour l’instant
+        Financé par les{" "}
+        <span className="relative inline-block">
+          <span className="line-through decoration-mist/70">dons</span>
+        </span>{" "}
+        café — sans pub tant qu’il reste du café
       </p>
     </div>
   );

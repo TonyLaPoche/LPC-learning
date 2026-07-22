@@ -16,8 +16,14 @@ export const BMC_WIDGET = {
 export const SUPPORT_COPY = {
   title: "Soutenir CléLPC",
   intro:
-    "CléLPC est gratuite, 100 % locale, et fonctionne pour l’instant grâce aux dons — sans publicité.",
-  noAds:
-    "Si tu préfères qu’il n’y ait pas de pubs plus tard, un petit don aide vraiment beaucoup à garder l’app indépendante et respectueuse.",
-  thanks: "Merci pour ton soutien — chaque café compte.",
+    "CléLPC est gratuite, 100 % locale, zéro compte… et maintenue par un dev qui carbure au café (italien, de préférence).",
+  whyTitle: "Pourquoi un don ?",
+  whyLead:
+    "Parce que derrière l’app il y a un humain, un clavier, et une cafetière qui fait des heures supp’.",
+  whyBody:
+    "Même 2 balles par mois, c’est déjà ~5 cafés de cafetière italienne pour moi — et une motivation extrême à patcher, corriger les clés LPC, et garder le moteur qui tourne. Chaque don compte : petit espresso ou grand lungo, le serveur (humain) dit merci.",
+  whyCredits:
+    "En bonus : tu peux retrouver ton nom ou pseudo dans l’app, en guise de remerciement… jusqu’à ce qu’Internet décide de fermer ses portes.",
+  thanks: "Allez, un café ? L’app te le rendra en clés bien placées.",
+  footer: "Pas de pub pour l’instant. Juste du code, du LPC, et de la caféine.",
 };
