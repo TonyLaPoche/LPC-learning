@@ -65,8 +65,8 @@ function phraseKeyRegex(pack: PackId): RegExp {
 function packAchievements(
   pack: PackId,
   progress: ProgressState,
-  freeVisited: boolean,
-  customVisited: boolean,
+  _freeVisited: boolean,
+  _customVisited: boolean,
 ): Achievement[] {
   const { xp, completed } = progress;
   const syllableKeys = countMatching(completed, syllableRegex(pack));
@@ -74,9 +74,6 @@ function packAchievements(
   const phraseKeys = countMatching(completed, phraseKeyRegex(pack));
   const recallBonus = countPrefix(completed, "reps-recall-");
   const repsDone = countPrefix(completed, "reps-");
-  const customKeys = completed.filter(
-    (id) => id.startsWith("custom-") && id !== "custom-compose",
-  ).length;
 
   const shared: Achievement[] = [
     {
@@ -177,24 +174,11 @@ function packAchievements(
       description: "8 rappels sans guide réussis",
       unlocked: recallBonus >= 8,
     },
-    {
-      id: "free-explorer",
-      title: "Explorateur",
-      description: "Ouvrir le mode libre",
-      unlocked: freeVisited,
-    },
-    {
-      id: "custom-writer",
-      title: "Auteur",
-      description: "Composer une phrase custom",
-      unlocked: customVisited || completed.includes("custom-compose"),
-    },
-    {
-      id: "custom-coder",
-      title: "Codeur libre",
-      description: "Valider 3 clés d’une phrase custom",
-      unlocked: customKeys >= 3,
-    },
+    // Mode libre / phrase custom masqués pour l’instant — achievements dormants
+    // {
+    //   id: "free-explorer",
+    //   ...
+    // },
     {
       id: "xp-100",
       title: "Centurion",

@@ -34,7 +34,7 @@ export function AboutPage() {
         <h2 className="font-display text-lg font-bold">Comment marche l’app</h2>
         <ul className="list-inside list-disc space-y-1.5 text-sm text-mist">
           <li>Parcours guidés : formes → positions → syllabes → mots → phrases</li>
-          <li>Mode libre : explore sans consigne, feedback live</li>
+          <li>Mode répétitions : 3× guidé, puis rappel sans guide</li>
           <li>
             Caméra + MediaPipe (mains & visage) — rien n’est envoyé sur un
             serveur

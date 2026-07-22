@@ -338,6 +338,8 @@ export const TRACKS: Array<{
   subtitle: string;
   badge: string;
   kind: "lesson" | "reps" | "free" | "custom";
+  /** Masqué de l’accueil (code conservé pour plus tard). */
+  hidden?: boolean;
 }> = [
   {
     id: "shapes",
@@ -401,6 +403,7 @@ export const TRACKS: Array<{
     subtitle: "Explore sans consigne — feedback live",
     badge: "∞",
     kind: "free",
+    hidden: true,
   },
   {
     id: "custom",
@@ -408,5 +411,6 @@ export const TRACKS: Array<{
     subtitle: "Écris une phrase, puis code-la clé par clé",
     badge: "✎",
     kind: "custom",
+    hidden: true,
   },
 ];

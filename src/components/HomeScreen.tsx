@@ -15,10 +15,10 @@ export function HomeScreen({
   onPackChange,
   onStart,
 }: HomeScreenProps) {
-  const lessons = TRACKS.filter((t) => t.kind === "lesson");
-  const reps = TRACKS.filter((t) => t.kind === "reps");
-  const free = TRACKS.find((t) => t.kind === "free");
-  const custom = TRACKS.find((t) => t.kind === "custom");
+  const lessons = TRACKS.filter((t) => t.kind === "lesson" && !t.hidden);
+  const reps = TRACKS.filter((t) => t.kind === "reps" && !t.hidden);
+  const free = TRACKS.find((t) => t.kind === "free" && !t.hidden);
+  const custom = TRACKS.find((t) => t.kind === "custom" && !t.hidden);
   const meta = packById(pack);
 
   return (
@@ -37,7 +37,7 @@ export function HomeScreen({
             <span className="block text-teal">Vois les sons.</span>
           </h1>
           <p className="mt-3 text-base text-mist sm:text-lg">
-            Parcours guidé, répétitions, ou mode libre — pack{" "}
+            Parcours guidé et répétitions — pack{" "}
             <span className="text-foam">{meta.label}</span>, tout reste sur ton
             appareil.
           </p>
