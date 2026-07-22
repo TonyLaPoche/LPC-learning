@@ -26,6 +26,30 @@ const HAND_MODEL =
 const FACE_MODEL =
   "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
 
+type VisionDelegate = "GPU" | "CPU";
+
+function canCreateWebGl(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    const gl =
+      canvas.getContext("webgl2", { failIfMajorPerformanceCaveat: false }) ??
+      canvas.getContext("webgl", { failIfMajorPerformanceCaveat: false });
+    if (!gl) return false;
+    const lose = gl.getExtension("WEBGL_lose_context");
+    lose?.loseContext();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function friendlyVisionError(raw: string): string {
+  if (/kGpuService|webgl|GPU|egl/i.test(raw)) {
+    return "Le coach caméra n’a pas pu démarrer (accélération graphique). Réessaie dans Chrome ou Edge, active l’accélération matérielle, et ferme les autres onglets gourmands.";
+  }
+  return raw || "Erreur chargement MediaPipe";
+}
+
 export type VisionStatus =
   | "idle"
   | "loading"
@@ -105,32 +129,30 @@ export function useLpcVision(opts: {
 
     let cancelled = false;
 
-    async function init() {
-      setStatus("loading");
-      setModelsReady(false);
-      setError(null);
+    async function createLandmarkers(
+      vision: Awaited<ReturnType<typeof FilesetResolver.forVisionTasks>>,
+      delegate: VisionDelegate,
+    ) {
+      const mobile = isMobilePerfProfile();
+      const perf = visionPerfProfile(mobile);
+
+      const hand = await HandLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: HAND_MODEL,
+          delegate,
+        },
+        runningMode: "VIDEO",
+        numHands: 1,
+        minHandDetectionConfidence: perf.handDetection,
+        minHandPresenceConfidence: perf.handPresence,
+        minTrackingConfidence: perf.handTracking,
+      });
+
       try {
-        const mobile = isMobilePerfProfile();
-        const perf = visionPerfProfile(mobile);
-        const vision = await FilesetResolver.forVisionTasks(WASM_URL);
-        if (cancelled) return;
-
-        handRef.current = await HandLandmarker.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath: HAND_MODEL,
-            delegate: "GPU",
-          },
-          runningMode: "VIDEO",
-          numHands: 1,
-          minHandDetectionConfidence: perf.handDetection,
-          minHandPresenceConfidence: perf.handPresence,
-          minTrackingConfidence: perf.handTracking,
-        });
-
-        faceRef.current = await FaceLandmarker.createFromOptions(vision, {
+        const face = await FaceLandmarker.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath: FACE_MODEL,
-            delegate: "GPU",
+            delegate,
           },
           runningMode: "VIDEO",
           numFaces: 1,
@@ -138,14 +160,58 @@ export function useLpcVision(opts: {
           minFacePresenceConfidence: 0.4,
           minTrackingConfidence: 0.4,
         });
+        return { hand, face };
+      } catch (err) {
+        hand.close();
+        throw err;
+      }
+    }
 
+    async function init() {
+      setStatus("loading");
+      setModelsReady(false);
+      setError(null);
+      try {
+        const vision = await FilesetResolver.forVisionTasks(WASM_URL);
         if (cancelled) return;
-        setStatus("ready");
-        setModelsReady(true);
+
+        // GPU d’abord ; si WebGL indisponible ou kGpuService → CPU
+        const order: VisionDelegate[] = canCreateWebGl()
+          ? ["GPU", "CPU"]
+          : ["CPU", "GPU"];
+
+        let lastErr: unknown;
+        for (const delegate of order) {
+          if (cancelled) return;
+          try {
+            const { hand, face } = await createLandmarkers(vision, delegate);
+            if (cancelled) {
+              hand.close();
+              face.close();
+              return;
+            }
+            handRef.current = hand;
+            faceRef.current = face;
+            setStatus("ready");
+            setModelsReady(true);
+            return;
+          } catch (e) {
+            lastErr = e;
+            handRef.current?.close();
+            faceRef.current?.close();
+            handRef.current = null;
+            faceRef.current = null;
+          }
+        }
+
+        const raw =
+          lastErr instanceof Error ? lastErr.message : String(lastErr ?? "");
+        setError(friendlyVisionError(raw));
+        setStatus("error");
+        setModelsReady(false);
       } catch (e) {
-        const msg =
-          e instanceof Error ? e.message : "Erreur chargement MediaPipe";
-        setError(msg);
+        const raw = e instanceof Error ? e.message : "Erreur chargement MediaPipe";
+        setError(friendlyVisionError(raw));
         setStatus("error");
         setModelsReady(false);
       }
@@ -200,14 +266,22 @@ export function useLpcVision(opts: {
 
       if (now - lastHandTs.current >= perf.handIntervalMs) {
         lastHandTs.current = now;
-        const hr = hand.detectForVideo(video, now);
-        handLmRef.current = hr.landmarks?.[0] ?? null;
+        try {
+          const hr = hand.detectForVideo(video, now);
+          handLmRef.current = hr.landmarks?.[0] ?? null;
+        } catch {
+          handLmRef.current = null;
+        }
       }
 
       if (now - lastFaceTs.current >= perf.faceIntervalMs) {
         lastFaceTs.current = now;
-        const fr = face.detectForVideo(video, now);
-        faceLmRef.current = fr.faceLandmarks?.[0] ?? null;
+        try {
+          const fr = face.detectForVideo(video, now);
+          faceLmRef.current = fr.faceLandmarks?.[0] ?? null;
+        } catch {
+          faceLmRef.current = null;
+        }
       }
 
       const handLm = handLmRef.current;
