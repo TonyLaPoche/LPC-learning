@@ -118,7 +118,11 @@ export const CONTENT_FR = {
     {
       id: "porte",
       word: "porte",
-      keys: [{ syllable: "porte", handshape: "c1", position: "chin" }],
+      keys: [
+        { syllable: "po", handshape: "c1", position: "chin" },
+        { syllable: "r", handshape: "c3", position: "side" },
+        { syllable: "t", handshape: "c5", position: "side" },
+      ],
     },
     {
       id: "table",
@@ -151,7 +155,10 @@ export const CONTENT_FR = {
     {
       id: "jour",
       word: "jour",
-      keys: [{ syllable: "jour", handshape: "c1", position: "chin" }],
+      keys: [
+        { syllable: "jou", handshape: "c1", position: "chin" },
+        { syllable: "r", handshape: "c3", position: "side" },
+      ],
     },
     {
       id: "merci-bis",
@@ -285,7 +292,8 @@ export const CONTENT_FR = {
       phrase: "Bonne journée",
       keys: [
         { syllable: "bonne", handshape: "c4", position: "chin" },
-        { syllable: "jour", handshape: "c1", position: "chin" },
+        { syllable: "jou", handshape: "c1", position: "chin" },
+        { syllable: "r", handshape: "c3", position: "side" },
         { syllable: "née", handshape: "c4", position: "throat" },
       ],
     },

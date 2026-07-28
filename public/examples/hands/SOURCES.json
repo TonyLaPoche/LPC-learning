@@ -1,13 +1,13 @@
 {
   "handshapes": {
-    "c1": { "file": "c1.jpg", "source": "Generated educational reference (LfPC)", "note": "Index — p, d, ʒ" },
-    "c2": { "file": "c2.jpg", "source": "Generated educational reference (LfPC)", "note": "Index + majeur — k, v, z" },
-    "c3": { "file": "c3.jpg", "source": "Generated educational reference (LfPC)", "note": "Trois doigts — s, ʁ" },
-    "c4": { "file": "c4.jpg", "source": "Generated educational reference (LfPC)", "note": "Quatre doigts — b, n, ɥ" },
-    "c5": { "file": "c5.jpg", "source": "Generated educational reference (LfPC)", "note": "Cinq doigts / ∅ — m, t, f" },
-    "c6": { "file": "c6.jpg", "source": "Generated educational reference (LfPC)", "note": "Forme L — l, ʃ, ɲ, w" },
-    "c7": { "file": "c7.jpg", "source": "Generated educational reference (LfPC)", "note": "Pouce + index + majeur — ɡ" },
-    "c8": { "file": "c8.jpg", "source": "Generated educational reference (LfPC)", "note": "Forme V — j, ŋ" }
+    "c1": { "file": "c1.jpg", "source": "Generated educational reference (LfPC)", "note": "Dos de main · Index — p, d, ʒ" },
+    "c2": { "file": "c2.jpg", "source": "Generated educational reference (LfPC)", "note": "Dos de main · Index + majeur — k, v, z" },
+    "c3": { "file": "c3.jpg", "source": "Generated educational reference (LfPC)", "note": "Dos de main · Index plié, 3 doigts (majeur+annulaire+auriculaire) — s, ʁ" },
+    "c4": { "file": "c4.jpg", "source": "Generated educational reference (LfPC)", "note": "Dos de main · Quatre doigts serrés — b, n, ɥ" },
+    "c5": { "file": "c5.jpg", "source": "Generated educational reference (LfPC)", "note": "Dos de main · Cinq doigts serrés / ∅ — m, t, f" },
+    "c6": { "file": "c6.jpg", "source": "Generated educational reference (LfPC)", "note": "Dos de main · Forme L — l, ʃ, ɲ, w" },
+    "c7": { "file": "c7.jpg", "source": "Generated educational reference (LfPC)", "note": "Dos de main · Pouce + index + majeur — ɡ" },
+    "c8": { "file": "c8.jpg", "source": "Generated educational reference (LfPC)", "note": "Dos de main · Forme V — j, ŋ" }
   },
   "positions": {
     "side": { "file": "../positions/side.jpg", "source": "Generated educational reference (LfPC)", "note": "Côté — a, o, œ, ə" },

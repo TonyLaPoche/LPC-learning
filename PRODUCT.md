@@ -56,12 +56,12 @@ Source de vérité : affiche « Clés du code LPC » (FR/CH) + [Montre le son](h
 
 | Id | Forme | Consonnes |
 |----|-------|-----------|
-| `c5` | Cinq doigts (pouce écarté) | m, t, f, ∅ |
+| `c5` | Cinq doigts serrés | m, t, f, ∅ |
 | `c1` | Index | p, d, ʒ |
-| `c4` | Quatre doigts | b, n, ɥ |
+| `c4` | Quatre doigts serrés | b, n, ɥ |
 | `c6` | Forme L (pouce + index) | l, ʃ, ɲ, w |
 | `c2` | Index + majeur jointifs | k, v, z |
-| `c3` | Trois doigts | s, ʁ |
+| `c3` | Trois doigts (index plié) | s, ʁ |
 | `c7` | Pouce + index + majeur jointifs | ɡ |
 | `c8` | Forme V | j, ŋ |
 

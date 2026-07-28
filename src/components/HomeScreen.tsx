@@ -1,13 +1,41 @@
+import { useState } from "react";
+import { IntroBanner } from "@/components/IntroBanner";
 import { TRACKS, type LessonTrack } from "@/data/lpc-fr";
 import { PACKS, packById, type PackId } from "@/data/packs";
 import type { ProgressState } from "@/lib/progress";
+import {
+  getTrackStats,
+  loadIntroSeen,
+  type TrackStats,
+} from "@/lib/trackProgress";
+
+type PracticeTrack = Exclude<LessonTrack, "free" | "custom">;
 
 type HomeScreenProps = {
   progress: ProgressState;
   pack: PackId;
   onPackChange: (pack: PackId) => void;
-  onStart: (track: LessonTrack) => void;
+  onStart: (track: LessonTrack, resumeIndex?: number) => void;
 };
+
+function statusBadge(stats: TrackStats): { label: string; className: string } {
+  if (stats.status === "done") {
+    return {
+      label: "Terminé",
+      className: "bg-ok/20 text-ok",
+    };
+  }
+  if (stats.status === "progress") {
+    return {
+      label: `Reprendre · ${stats.done}/${stats.total}`,
+      className: "bg-teal/20 text-teal",
+    };
+  }
+  return {
+    label: "Jouer",
+    className: "bg-ink/60 text-teal group-hover:bg-teal/20",
+  };
+}
 
 export function HomeScreen({
   progress,
@@ -15,6 +43,7 @@ export function HomeScreen({
   onPackChange,
   onStart,
 }: HomeScreenProps) {
+  const [showIntro, setShowIntro] = useState(() => !loadIntroSeen());
   const lessons = TRACKS.filter((t) => t.kind === "lesson" && !t.hidden);
   const reps = TRACKS.filter((t) => t.kind === "reps" && !t.hidden);
   const free = TRACKS.find((t) => t.kind === "free" && !t.hidden);
@@ -38,19 +67,21 @@ export function HomeScreen({
           </h1>
           <p className="mt-3 text-base text-mist sm:text-lg">
             Parcours guidé et répétitions — pack{" "}
-            <span className="text-foam">{meta.label}</span>, tout reste sur ton
-            appareil.
+            <span className="text-foam">{meta.label}</span>, progression locale
+            sur ton appareil (pas besoin de compte).
           </p>
           <p className="mt-4 text-sm text-foam/80">
             XP : <span className="font-semibold text-sky">{progress.xp}</span>
             {" · "}
-            Leçons :{" "}
+            Clés validées :{" "}
             <span className="font-semibold text-teal">
               {progress.completed.length}
             </span>
           </p>
         </div>
       </section>
+
+      {showIntro && <IntroBanner onDismiss={() => setShowIntro(false)} />}
 
       <section>
         <h2 className="mb-2 font-display text-lg font-bold text-foam">
@@ -133,30 +164,55 @@ export function HomeScreen({
         <h2 className="mb-3 font-display text-lg font-bold text-foam">
           Parcours d’apprentissage
         </h2>
+        <p className="mb-3 text-sm text-mist">
+          Les pastilles indiquent ce qui est déjà validé — tu peux reprendre où
+          tu t’es arrêté.
+        </p>
         <div className="grid gap-3 sm:grid-cols-2">
-          {lessons.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => onStart(t.id)}
-              className="group rounded-2xl border border-panel-2/70 bg-panel/60 p-5 text-left transition hover:border-teal/50 hover:bg-panel"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-sky">
-                    Étape {t.badge}
-                  </p>
-                  <h3 className="mt-1 font-display text-xl font-bold">
-                    {t.title}
-                  </h3>
-                  <p className="mt-1 text-sm text-mist">{t.subtitle}</p>
+          {lessons.map((t) => {
+            const stats = getTrackStats(t.id as PracticeTrack, pack, progress);
+            const badge = statusBadge(stats);
+            const pct =
+              stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() =>
+                  onStart(
+                    t.id,
+                    stats.status === "done" ? 0 : stats.resumeIndex,
+                  )
+                }
+                className="group rounded-2xl border border-panel-2/70 bg-panel/60 p-5 text-left transition hover:border-teal/50 hover:bg-panel"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-sky">
+                      Étape {t.badge}
+                    </p>
+                    <h3 className="mt-1 font-display text-xl font-bold">
+                      {t.title}
+                    </h3>
+                    <p className="mt-1 text-sm text-mist">{t.subtitle}</p>
+                    {stats.total > 0 && (
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink/70">
+                        <div
+                          className="h-full rounded-full bg-teal/80"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-3 py-1 text-xs ${badge.className}`}
+                  >
+                    {badge.label}
+                  </span>
                 </div>
-                <span className="rounded-full bg-ink/60 px-3 py-1 text-xs text-teal group-hover:bg-teal/20">
-                  Jouer
-                </span>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       </section>
 
@@ -168,20 +224,34 @@ export function HomeScreen({
           3 fois guidé, puis 1 rappel sans guide (bonus si réussi).
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
-          {reps.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => onStart(t.id)}
-              className="rounded-2xl border border-sky/30 bg-sky/5 p-4 text-left transition hover:border-sky/60 hover:bg-sky/10"
-            >
-              <p className="text-xs font-semibold uppercase tracking-wider text-sky">
-                Drill
-              </p>
-              <h3 className="mt-1 font-display text-base font-bold">{t.title}</h3>
-              <p className="mt-1 text-xs text-mist">{t.subtitle}</p>
-            </button>
-          ))}
+          {reps.map((t) => {
+            const stats = getTrackStats(t.id as PracticeTrack, pack, progress);
+            const badge = statusBadge(stats);
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() =>
+                  onStart(
+                    t.id,
+                    stats.status === "done" ? 0 : stats.resumeIndex,
+                  )
+                }
+                className="rounded-2xl border border-sky/30 bg-sky/5 p-4 text-left transition hover:border-sky/60 hover:bg-sky/10"
+              >
+                <p className="text-xs font-semibold uppercase tracking-wider text-sky">
+                  Drill
+                </p>
+                <h3 className="mt-1 font-display text-base font-bold">
+                  {t.title}
+                </h3>
+                <p className="mt-1 text-xs text-mist">{t.subtitle}</p>
+                <p className={`mt-2 text-[10px] font-semibold ${badge.className.includes("ok") ? "text-ok" : "text-sky"}`}>
+                  {badge.label}
+                </p>
+              </button>
+            );
+          })}
         </div>
       </section>
     </div>

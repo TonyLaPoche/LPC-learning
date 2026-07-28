@@ -24,13 +24,14 @@ function scoreMatch(f: FingerState, expected: FingerState): number {
 }
 
 /**
- * Signatures idéales des 8 configs LfPC (Montre le son / ALPC).
+ * Signatures idéales des 8 configs LfPC.
+ * c3 = index plié + 3 doigts (majeur/annulaire/auriculaire).
  * c2/c8 partagent index+majeur → heuristique d’écartement.
  */
 const SIGNATURES: Record<HandshapeId, FingerState> = {
   c1: { thumb: false, index: true, middle: false, ring: false, pinky: false },
   c2: { thumb: false, index: true, middle: true, ring: false, pinky: false },
-  c3: { thumb: false, index: true, middle: true, ring: true, pinky: false },
+  c3: { thumb: false, index: false, middle: true, ring: true, pinky: true },
   c4: { thumb: false, index: true, middle: true, ring: true, pinky: true },
   c5: { thumb: true, index: true, middle: true, ring: true, pinky: true },
   c6: { thumb: true, index: true, middle: false, ring: false, pinky: false },

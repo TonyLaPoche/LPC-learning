@@ -20,6 +20,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>("browse");
   const [page, setPage] = useState<AppPage>("home");
   const [track, setTrack] = useState<LessonTrack>("shapes");
+  const [resumeIndex, setResumeIndex] = useState(0);
   const [pack, setPack] = useState<PackId>(() => loadPack());
   const [progress, setProgress] = useState<ProgressState>(() =>
     loadProgress(loadPack()),
@@ -81,6 +82,7 @@ export default function App() {
             <PracticeArena
               track={track}
               pack={pack}
+              initialIndex={resumeIndex}
               onExit={goHome}
               onProgress={refreshProgress}
             />
@@ -98,9 +100,10 @@ export default function App() {
             progress={progress}
             pack={pack}
             onPackChange={changePack}
-            onStart={(t) => {
+            onStart={(t, at) => {
               if (t === "free") markFreeVisited();
               setTrack(t);
+              setResumeIndex(at ?? 0);
               setScreen("practice");
             }}
           />

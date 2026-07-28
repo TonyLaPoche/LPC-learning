@@ -27,6 +27,10 @@ import {
   FACE_ZOOM_MAX,
 } from "@/lib/progress";
 import type { CueToken } from "@/lib/lpcPhonemes";
+import {
+  clearTrackCursor,
+  saveTrackCursor,
+} from "@/lib/trackProgress";
 
 export type CustomSession = {
   label: string;
@@ -40,6 +44,8 @@ type PracticeArenaProps = {
   onProgress: () => void;
   customSession?: CustomSession;
   onEditPhrase?: () => void;
+  /** Reprendre à cet index (parcours interrompu). */
+  initialIndex?: number;
 };
 
 type Step = {
@@ -247,7 +253,7 @@ function buildSteps(
   return steps;
 }
 
-const HOLD_MS = 1200;
+const HOLD_MS = 1800;
 
 export function PracticeArena({
   track,
@@ -256,6 +262,7 @@ export function PracticeArena({
   onProgress,
   customSession,
   onEditPhrase,
+  initialIndex = 0,
 }: PracticeArenaProps) {
   const steps = useMemo(
     () =>
@@ -264,11 +271,17 @@ export function PracticeArena({
         : buildSteps(track, pack),
     [track, pack, customSession],
   );
-  const [index, setIndex] = useState(0);
+  const startIndex = Math.min(
+    Math.max(0, initialIndex),
+    Math.max(0, steps.length - 1),
+  );
+  const [index, setIndex] = useState(startIndex);
   const [holdPct, setHoldPct] = useState(0);
   const [flashOk, setFlashOk] = useState(false);
   const [flashBonus, setFlashBonus] = useState(false);
   const [sessionDone, setSessionDone] = useState(false);
+  /** Rien n’est validé tant que l’utilisateur n’a pas cliqué « Je suis prêt ». */
+  const [armed, setArmed] = useState(false);
   const [faceZoom, setFaceZoom] = useState(() => loadFaceZoom());
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -277,12 +290,15 @@ export function PracticeArena({
   const completingRef = useRef(false);
   const indexRef = useRef(0);
   const stepsLenRef = useRef(steps.length);
-  const stepIdRef = useRef(steps[0]!.id);
+  const stepIdRef = useRef(steps[startIndex]!.id);
   const stepBonusRef = useRef(false);
   const onProgressRef = useRef(onProgress);
   const packRef = useRef(pack);
+  const trackRef = useRef(track);
   const matchAllRef = useRef(false);
   const sessionDoneRef = useRef(false);
+  const armedRef = useRef(false);
+  const cameraReadyRef = useRef(false);
 
   indexRef.current = index;
   stepsLenRef.current = steps.length;
@@ -290,9 +306,12 @@ export function PracticeArena({
   stepBonusRef.current = steps[index]!.bonus;
   onProgressRef.current = onProgress;
   packRef.current = pack;
+  trackRef.current = track;
   sessionDoneRef.current = sessionDone;
+  armedRef.current = armed;
 
   const camera = useCamera(videoRef);
+  cameraReadyRef.current = camera.ready;
   const step = steps[index]!;
 
   const vision = useLpcVision({
@@ -301,8 +320,8 @@ export function PracticeArena({
     cameraReady: camera.ready,
     enabled: true,
     target: {
-      handshape: sessionDone ? null : step.handshape,
-      position: sessionDone ? null : step.position,
+      handshape: sessionDone || !armed ? null : step.handshape,
+      position: sessionDone || !armed ? null : step.position,
     },
   });
 
@@ -321,12 +340,17 @@ export function PracticeArena({
     setHoldPct(0);
     setFlashOk(false);
     setFlashBonus(false);
+    setArmed(false);
+    if (!customSession) {
+      saveTrackCursor(pack, track, index);
+    }
   }, [index, track, pack, customSession]);
 
   useEffect(() => {
-    setIndex(0);
+    setIndex(startIndex);
     setSessionDone(false);
-  }, [customSession?.label, track, pack]);
+    setArmed(false);
+  }, [customSession?.label, track, pack, startIndex]);
 
   useEffect(() => {
     let raf = 0;
@@ -344,7 +368,12 @@ export function PracticeArena({
         return;
       }
 
-      if (matchAllRef.current) {
+      const canScore =
+        armedRef.current &&
+        cameraReadyRef.current &&
+        matchAllRef.current;
+
+      if (canScore) {
         holdAcc.current = Math.min(HOLD_MS, holdAcc.current + dt);
       } else {
         holdAcc.current = Math.max(0, holdAcc.current - dt * 1.5);
@@ -371,6 +400,9 @@ export function PracticeArena({
         window.setTimeout(() => {
           if (!alive) return;
           if (isLast) {
+            if (!customSession) {
+              clearTrackCursor(packRef.current, trackRef.current);
+            }
             setSessionDone(true);
             return;
           }
@@ -395,8 +427,27 @@ export function PracticeArena({
     setFlashOk(false);
     setFlashBonus(false);
     setHoldPct(0);
+    setArmed(false);
     setIndex(0);
     setSessionDone(false);
+    if (!customSession) clearTrackCursor(pack, track);
+  };
+
+  const retryStep = () => {
+    holdAcc.current = 0;
+    lastTs.current = null;
+    completingRef.current = false;
+    setFlashOk(false);
+    setFlashBonus(false);
+    setHoldPct(0);
+    setArmed(false);
+  };
+
+  const handleExit = () => {
+    if (!customSession && !sessionDone) {
+      saveTrackCursor(pack, track, index);
+    }
+    onExit();
   };
 
   const shapeLabel = vision.reading.handshape
@@ -406,13 +457,20 @@ export function PracticeArena({
     ? packPosition(pack, vision.reading.position).label
     : "—";
 
+  const lipsLabel =
+    step.handshape && step.position
+      ? step.title.includes("·")
+        ? step.title.split("·").pop()?.trim() ?? step.title
+        : step.title
+      : null;
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={onExit}
+            onClick={handleExit}
             className="rounded-full border border-panel-2 px-3 py-1 text-sm text-mist hover:border-foam/40 hover:text-foam"
           >
             ← Accueil
@@ -448,7 +506,7 @@ export function PracticeArena({
             </button>
             <button
               type="button"
-              onClick={onExit}
+              onClick={handleExit}
               className="rounded-full border border-panel-2 px-4 py-2 text-sm text-foam"
             >
               Accueil
@@ -490,6 +548,7 @@ export function PracticeArena({
             <CueExample
               handshape={step.handshape}
               position={step.position}
+              lipsLabel={lipsLabel}
               compact
             />
           ) : (
@@ -540,6 +599,24 @@ export function PracticeArena({
         {(camera.error || vision.error) && (
           <div className="absolute inset-0 flex items-center justify-center bg-ink/90 p-4 text-center text-sm text-coral">
             {camera.error ?? vision.error}
+          </div>
+        )}
+
+        {!sessionDone && !armed && camera.ready && !camera.error && !vision.error && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-ink/75 p-4 text-center backdrop-blur-[2px]">
+            <p className="max-w-xs text-sm text-foam">
+              Regarde d’abord <strong className="text-teal">Forme</strong>,{" "}
+              <strong className="text-sky">Zone</strong> et{" "}
+              <strong className="text-coral">Lèvres</strong> en haut — puis
+              prépare ta main.
+            </p>
+            <button
+              type="button"
+              onClick={() => setArmed(true)}
+              className="rounded-full bg-teal px-5 py-2.5 text-sm font-bold text-ink shadow-lg"
+            >
+              Je suis prêt
+            </button>
           </div>
         )}
 
@@ -622,7 +699,7 @@ export function PracticeArena({
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               disabled={index === 0 || flashOk}
@@ -639,14 +716,24 @@ export function PracticeArena({
             >
               Passer
             </button>
+            <button
+              type="button"
+              disabled={flashOk}
+              onClick={retryStep}
+              className="rounded-full border border-sky/40 px-3 py-1 text-xs text-sky disabled:opacity-40 sm:text-sm"
+            >
+              Recommencer l’étape
+            </button>
             <p className="ml-auto self-center text-[10px] text-mist/80 sm:text-xs">
-              {vision.status === "no-hand"
-                ? "Montre une main"
-                : vision.status === "loading"
-                  ? "Modèles…"
-                  : step.guided
-                    ? "Imite l’exemple"
-                    : "Code de mémoire"}
+              {!armed
+                ? "Prépare-toi…"
+                : vision.status === "no-hand"
+                  ? "Montre une main"
+                  : vision.status === "loading"
+                    ? "Modèles…"
+                    : step.guided
+                      ? "Tiens la clé ~2 s"
+                      : "Code de mémoire"}
             </p>
           </div>
         </div>

@@ -84,26 +84,27 @@ export function buildZoneRects(
   const colR = midX + colHalf;
   const colW = Math.max(0.02, colR - colL);
 
-  // Séparations verticales : gap menton↔gorge (barbe) + gorge étirée vers le bas
-  const mouthTop = anchors.mouth.y - fw * 0.12;
-  const mouthBot = (anchors.mouth.y + anchors.chin.y) * 0.5;
+  // Centre : bouche (commissure) → menton → gorge
+  // Pommette : bande sous l’œil, au-dessus de la bouche
+  const mouthY = anchors.mouth.y;
+  const mouthH = fw * 0.14;
+  const mouth: NormRect = {
+    x: colL - fw * 0.06,
+    y: mouthY - mouthH * 0.45,
+    w: colW + fw * 0.12,
+    h: mouthH,
+  };
+  const chinTop = mouth.y + mouth.h;
   const chinBot = anchors.chin.y + fw * 0.04;
+  const chin: NormRect = {
+    x: colL,
+    y: chinTop,
+    w: colW,
+    h: Math.max(0.02, chinBot - chinTop),
+  };
   const throatGap = fw * 0.07;
   const throatTop = chinBot + throatGap;
   const throatBot = throatTop + fw * 0.48;
-
-  const mouth: NormRect = {
-    x: colL,
-    y: mouthTop,
-    w: colW,
-    h: Math.max(0.02, mouthBot - mouthTop),
-  };
-  const chin: NormRect = {
-    x: colL,
-    y: mouthBot,
-    w: colW,
-    h: Math.max(0.02, chinBot - mouthBot),
-  };
   const throat: NormRect = {
     x: colL,
     y: throatTop,
@@ -111,9 +112,9 @@ export function buildZoneRects(
     h: Math.max(0.02, throatBot - throatTop),
   };
 
-  // Joue / côté : même bande verticale, séparés en x à faceL / faceR
-  const bandTop = Math.min(anchors.templeL.y, anchors.templeR.y) - fw * 0.02;
-  const bandBot = anchors.mouth.y + fw * 0.08;
+  // Pommette : sous les yeux / tempe basse → arrêt avant la bouche
+  const bandTop = Math.min(anchors.templeL.y, anchors.templeR.y) + fw * 0.02;
+  const bandBot = Math.min(mouthY - fw * 0.06, anchors.nose.y + fw * 0.16);
   const bandH = Math.max(0.04, bandBot - bandTop);
   const sideW = fw * 0.42;
 

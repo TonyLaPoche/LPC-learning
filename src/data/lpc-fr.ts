@@ -67,19 +67,19 @@ export const HANDSHAPES: HandshapeDef[] = [
   {
     id: "c3",
     label: "Trois doigts",
-    hint: "Index, majeur et annulaire tendus (auriculaire fermé)",
+    hint: "Majeur, annulaire et auriculaire tendus — index plié",
     consonants: ["s", "ʁ"],
   },
   {
     id: "c4",
     label: "Quatre doigts",
-    hint: "Quatre doigts tendus, pouce rentré",
+    hint: "Quatre doigts tendus et serrés, pouce rentré",
     consonants: ["b", "n", "ɥ"],
   },
   {
     id: "c5",
     label: "Cinq doigts",
-    hint: "Main ouverte (pouce écarté) — aussi voyelle seule",
+    hint: "Main ouverte, doigts serrés (pouce écarté) — aussi voyelle seule",
     consonants: ["m", "t", "f", "∅"],
   },
   {
@@ -112,26 +112,26 @@ export const POSITIONS: PositionDef[] = [
   {
     id: "cheek",
     label: "Pommette",
-    hint: "Contre la pommette / joue",
+    hint: "Sous l’œil / pommette — pas jusqu’à la bouche",
     vowels: ["ɛ̃", "ø"],
   },
   {
     id: "mouth",
     label: "Bouche",
-    hint: "Devant la bouche / lèvres",
+    hint: "Au coin de la bouche (commissure)",
     vowels: ["i", "ɔ̃", "ɑ̃"],
   },
   {
     id: "chin",
     label: "Menton",
     hint: "Contre ou juste sous le menton",
-    vowels: ["ɛ", "u", "ɔ"],
+    vowels: ["ɛ", "ou (/u/)", "ɔ"],
   },
   {
     id: "throat",
     label: "Gorge",
     hint: "Sous le menton, côté gorge / cou",
-    vowels: ["y", "e", "œ̃"],
+    vowels: ["u (/y/)", "é", "œ̃"],
   },
 ];
 
@@ -168,8 +168,8 @@ export const SYLLABLE_DRILLS: DrillItem[] = [
     id: "tu",
     label: "Syllabe tu",
     display: "tu",
-    cue: { handshape: "c5", position: "chin" },
-    tip: "Cinq doigts + menton",
+    cue: { handshape: "c5", position: "throat" },
+    tip: "Cinq doigts + gorge (u = /y/)",
   },
   {
     id: "ma",
