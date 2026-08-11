@@ -14,7 +14,7 @@ import { PracticeArena } from "@/components/PracticeArena";
 import { ProfilePage } from "@/components/ProfilePage";
 import { SupportPage } from "@/components/SupportPage";
 import type { LessonTrack } from "@/data/lpc-fr";
-import { loadPack, savePack, type PackId } from "@/data/packs";
+import { loadPack, savePack, PACK_WIP, type PackId } from "@/data/packs";
 import { loadProgress, type ProgressState } from "@/lib/progress";
 import { markFreeVisited } from "@/lib/visits";
 
@@ -41,6 +41,7 @@ export default function App() {
   }, [pack]);
 
   const changePack = (next: PackId) => {
+    if (PACK_WIP[next] || next === pack) return;
     savePack(next);
     setPack(next);
     setProgress(loadProgress(next));

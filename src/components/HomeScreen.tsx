@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { IntroBanner } from "@/components/IntroBanner";
 import { TRACKS, type LessonTrack } from "@/data/lpc-fr";
-import { PACKS, packById, type PackId } from "@/data/packs";
+import { PACKS, PACK_WIP, packById, type PackId } from "@/data/packs";
 import type { ProgressState } from "@/lib/progress";
+import { BUY_ME_A_COFFEE_URL, SUPPORT_COPY } from "@/lib/support";
 import {
   getTrackStats,
   loadIntroSeen,
@@ -53,6 +54,7 @@ export function HomeScreen({
   onOpenDebugSyllables,
 }: HomeScreenProps) {
   const [showIntro, setShowIntro] = useState(() => !loadIntroSeen());
+  const [enWipOpen, setEnWipOpen] = useState(false);
   const lessons = TRACKS.filter((t) => t.kind === "lesson" && !t.hidden);
   const reps = TRACKS.filter((t) => t.kind === "reps" && !t.hidden);
   const free = TRACKS.find((t) => t.kind === "free" && !t.hidden);
@@ -97,33 +99,131 @@ export function HomeScreen({
           Système / langue
         </h2>
         <p className="mb-3 text-sm text-mist">
-          LPC français et Cued Speech anglais ont des tables différentes —
-          progression et succès séparés.
+          {PACK_WIP.en
+            ? "LPC français disponible. Le Cued Speech anglais arrive bientôt — aide-nous à le financer."
+            : "LPC français et Cued Speech anglais (dev) — tables et progression séparées."}
         </p>
         <div className="grid grid-cols-2 gap-2">
           {PACKS.map((p) => {
-            const active = p.id === pack;
+            const wip = PACK_WIP[p.id];
+            const active = !wip && p.id === pack;
             return (
               <button
                 key={p.id}
                 type="button"
-                onClick={() => onPackChange(p.id)}
+                onClick={() => {
+                  if (wip) {
+                    setEnWipOpen(true);
+                    return;
+                  }
+                  onPackChange(p.id);
+                }}
+                onContextMenu={
+                  p.id === "en" && import.meta.env.DEV
+                    ? (e) => {
+                        e.preventDefault();
+                        setEnWipOpen(true);
+                      }
+                    : undefined
+                }
+                aria-disabled={wip}
                 className={`rounded-2xl border p-4 text-left transition ${
-                  active
-                    ? "border-teal bg-teal/15"
-                    : "border-panel-2/70 bg-panel/50 hover:border-teal/40"
+                  wip
+                    ? "border-panel-2/50 bg-panel/30 opacity-70 hover:border-amber-400/40 hover:opacity-90"
+                    : active
+                      ? "border-teal bg-teal/15"
+                      : "border-panel-2/70 bg-panel/50 hover:border-teal/40"
                 }`}
               >
-                <p className="text-xs font-semibold uppercase tracking-wider text-sky">
-                  {p.short}
-                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-sky">
+                    {p.short}
+                  </p>
+                  {wip ? (
+                    <span className="rounded-full bg-amber-300/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200">
+                      Bientôt
+                    </span>
+                  ) : (
+                    p.id === "en" &&
+                    import.meta.env.DEV && (
+                      <span className="rounded-full bg-ok/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ok">
+                        Dev
+                      </span>
+                    )
+                  )}
+                </div>
                 <p className="mt-1 font-display text-lg font-bold">{p.label}</p>
                 <p className="mt-0.5 text-xs text-mist">{p.subtitle}</p>
+                {p.id === "en" && import.meta.env.DEV && (
+                  <p className="mt-2 text-[10px] text-amber-200/90">
+                    Clic droit → prévisualiser la modal FOMO (prod)
+                  </p>
+                )}
               </button>
             );
           })}
         </div>
       </section>
+
+      {enWipOpen && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-ink/75 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="en-wip-title"
+          onClick={() => setEnWipOpen(false)}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-3xl border border-amber-400/35 bg-panel shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-amber-400/25 bg-amber-400/10 px-6 py-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-200">
+                Exclusive · English Cued Speech
+              </p>
+              <h2
+                id="en-wip-title"
+                className="mt-1 font-display text-2xl font-bold text-foam"
+              >
+                Presque là — il manque un coup de pouce
+              </h2>
+            </div>
+            <div className="space-y-3 px-6 py-5">
+              <p className="text-sm leading-relaxed text-mist">
+                Le pack anglais est en cours de construction. Sans soutien, il
+                reste en file d’attente derrière le LPC français que tu utilises
+                déjà gratuitement.
+              </p>
+              <p className="text-sm leading-relaxed text-foam/90">
+                Un café sur Buy me a coffee, c’est concrètement du temps de
+                dév pour débloquer les tables EN, les drills et la progression
+                séparée.{" "}
+                <span className="text-amber-200">
+                  Plus on est soutenus, plus vite ça sort.
+                </span>
+              </p>
+              <p className="text-xs text-mist">{SUPPORT_COPY.thanks}</p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <a
+                  href={BUY_ME_A_COFFEE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full bg-[#5F7FFF] px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
+                >
+                  Débloquer avec un café
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setEnWipOpen(false)}
+                  className="rounded-full border border-panel-2 px-4 py-2.5 text-sm text-mist hover:border-foam/40 hover:text-foam"
+                >
+                  Plus tard — rester en FR
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {free && (
         <div className="space-y-3">

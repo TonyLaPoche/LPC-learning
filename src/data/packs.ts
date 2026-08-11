@@ -35,6 +35,13 @@ export type PackMeta = {
   subtitle: string;
 };
 
+/** Packs bloqués hors développement (prod = FOMO / soutien). */
+export const PACK_WIP: Record<PackId, boolean> = {
+  fr: false,
+  /** EN accessible uniquement en `npm run dev`. */
+  en: !import.meta.env.DEV,
+};
+
 export type PackContent = {
   words: WordDrill[];
   phrases: PhraseDrill[];
@@ -60,6 +67,11 @@ const PACK_STORAGE = "cle-lpc-pack-v1";
 export function loadPack(): PackId {
   try {
     const raw = localStorage.getItem(PACK_STORAGE);
+    // EN en travaux — toujours forcer le français
+    if (raw === "en" && PACK_WIP.en) {
+      localStorage.setItem(PACK_STORAGE, "fr");
+      return "fr";
+    }
     if (raw === "en" || raw === "fr") return raw;
     // Ancien pack Suisse → Français
     if (raw === "ch") {
@@ -73,6 +85,10 @@ export function loadPack(): PackId {
 }
 
 export function savePack(id: PackId) {
+  if (PACK_WIP[id]) {
+    localStorage.setItem(PACK_STORAGE, "fr");
+    return;
+  }
   localStorage.setItem(PACK_STORAGE, id);
 }
 
