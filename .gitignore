@@ -16,3 +16,6 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Docs privés (RDV asso, propositions CHF, PDF) — ne pas pousser
+/docs/
