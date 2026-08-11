@@ -123,7 +123,8 @@ export function trackStepIds(
   if (track === "words") {
     const ids: string[] = [];
     for (const w of words) {
-      w.keys.forEach((_, i) => ids.push(`${w.id}-${i}`));
+      w.keys.forEach((_, i) => ids.push(`${w.id}-learn-${i}`));
+      if (w.keys.length >= 2) ids.push(`${w.id}-chain`);
     }
     return ids;
   }

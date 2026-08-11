@@ -56,7 +56,21 @@ type Step = {
   position: PositionId | null;
   guided: boolean;
   bonus: boolean;
+  /** Durée de maintien pour valider (défaut 1,8 s). */
+  holdMs: number;
+  /** Enchaînement multi-clés (parcours mots). */
+  sequence?: Array<{
+    syllable: string;
+    handshape: HandshapeId;
+    position: PositionId;
+  }>;
+  /** Après validation : pause « mot suivant / recommencer ». */
+  afterWord?: { word: string; restartAt: number };
 };
+
+const HOLD_DEFAULT_MS = 1800;
+const HOLD_WORD_LEARN_MS = 800;
+const HOLD_WORD_CHAIN_MS = 500;
 
 const GUIDED_REPS = 3;
 
@@ -76,6 +90,7 @@ function pushKeySteps(
       position: k.position,
       guided: opts.guided,
       bonus: opts.bonus && i === keys.length - 1,
+      holdMs: HOLD_DEFAULT_MS,
     });
   });
 }
@@ -95,6 +110,7 @@ function buildRepSyllableSteps(pack: PackId): Step[] {
         position: cur.cue.position,
         guided: true,
         bonus: false,
+        holdMs: HOLD_DEFAULT_MS,
       });
     }
     if (i >= 1) {
@@ -107,6 +123,7 @@ function buildRepSyllableSteps(pack: PackId): Step[] {
         position: prev.cue.position,
         guided: false,
         bonus: true,
+        holdMs: HOLD_DEFAULT_MS,
       });
     }
   }
@@ -170,7 +187,55 @@ function buildCustomSteps(session: CustomSession): Step[] {
     position: k.position,
     guided: true,
     bonus: false,
+    holdMs: HOLD_DEFAULT_MS,
   }));
+}
+
+function buildWordSteps(words: WordDrill[]): Step[] {
+  const steps: Step[] = [];
+  for (const w of words) {
+    const learnStart = steps.length;
+    const syllLabel = w.keys.map((k) => k.syllable).join(" → ");
+    w.keys.forEach((k, i) => {
+      steps.push({
+        id: `${w.id}-learn-${i}`,
+        title: `${w.word} · ${k.syllable}`,
+        subtitle:
+          w.keys.length === 1
+            ? `Syllabe · tiens ${(HOLD_WORD_LEARN_MS / 1000).toFixed(1)} s`
+            : `Syllabe ${i + 1}/${w.keys.length} · tiens ${(HOLD_WORD_LEARN_MS / 1000).toFixed(1)} s`,
+        handshape: k.handshape,
+        position: k.position,
+        guided: true,
+        bonus: false,
+        holdMs: HOLD_WORD_LEARN_MS,
+        afterWord:
+          w.keys.length === 1
+            ? { word: w.word, restartAt: learnStart }
+            : undefined,
+      });
+    });
+    if (w.keys.length >= 2) {
+      const first = w.keys[0]!;
+      steps.push({
+        id: `${w.id}-chain`,
+        title: w.word,
+        subtitle: `Enchaîne ${syllLabel} · ${(HOLD_WORD_CHAIN_MS / 1000).toFixed(1)} s / clé`,
+        handshape: first.handshape,
+        position: first.position,
+        guided: true,
+        bonus: true,
+        holdMs: HOLD_WORD_CHAIN_MS,
+        sequence: w.keys.map((k) => ({
+          syllable: k.syllable,
+          handshape: k.handshape,
+          position: k.position,
+        })),
+        afterWord: { word: w.word, restartAt: learnStart },
+      });
+    }
+  }
+  return steps;
 }
 
 function buildSteps(
@@ -195,6 +260,7 @@ function buildSteps(
       position: null,
       guided: true,
       bonus: false,
+      holdMs: HOLD_DEFAULT_MS,
     }));
   }
   if (track === "positions") {
@@ -206,6 +272,7 @@ function buildSteps(
       position: p.id,
       guided: true,
       bonus: false,
+      holdMs: HOLD_DEFAULT_MS,
     }));
   }
   if (track === "syllables") {
@@ -217,6 +284,7 @@ function buildSteps(
       position: s.cue.position,
       guided: true,
       bonus: false,
+      holdMs: HOLD_DEFAULT_MS,
     }));
   }
   if (track === "phrases") {
@@ -231,29 +299,15 @@ function buildSteps(
           position: k.position,
           guided: true,
           bonus: false,
+          holdMs: HOLD_DEFAULT_MS,
         });
       });
     }
     return steps;
   }
-  const steps: Step[] = [];
-  for (const w of words) {
-    w.keys.forEach((k, i) => {
-      steps.push({
-        id: `${w.id}-${i}`,
-        title: `${w.word} · ${k.syllable}`,
-        subtitle: `Clé ${i + 1}/${w.keys.length}`,
-        handshape: k.handshape,
-        position: k.position,
-        guided: true,
-        bonus: false,
-      });
-    });
-  }
-  return steps;
+  if (track === "words") return buildWordSteps(words);
+  return [];
 }
-
-const HOLD_MS = 1800;
 
 export function PracticeArena({
   track,
@@ -280,6 +334,13 @@ export function PracticeArena({
   const [flashOk, setFlashOk] = useState(false);
   const [flashBonus, setFlashBonus] = useState(false);
   const [sessionDone, setSessionDone] = useState(false);
+  /** Pause ludique après un mot (suivant / recommencer). */
+  const [wordPause, setWordPause] = useState<{
+    word: string;
+    restartAt: number;
+  } | null>(null);
+  /** Index dans une séquence d’enchaînement. */
+  const [seqIndex, setSeqIndex] = useState(0);
   /** Rien n’est validé tant que l’utilisateur n’a pas cliqué « Je suis prêt ». */
   const [armed, setArmed] = useState(false);
   const [faceZoom, setFaceZoom] = useState(() => loadFaceZoom());
@@ -292,27 +353,47 @@ export function PracticeArena({
   const stepsLenRef = useRef(steps.length);
   const stepIdRef = useRef(steps[startIndex]!.id);
   const stepBonusRef = useRef(false);
+  const holdMsRef = useRef(steps[startIndex]!.holdMs);
+  const sequenceLenRef = useRef(steps[startIndex]!.sequence?.length ?? 0);
+  const seqIndexRef = useRef(0);
+  const afterWordRef = useRef(steps[startIndex]!.afterWord);
   const onProgressRef = useRef(onProgress);
   const packRef = useRef(pack);
   const trackRef = useRef(track);
   const matchAllRef = useRef(false);
   const sessionDoneRef = useRef(false);
+  const wordPauseRef = useRef(false);
   const armedRef = useRef(false);
   const cameraReadyRef = useRef(false);
+  /** Auto-avance entre syllabes : ne pas redemander « Je suis prêt ». */
+  const keepArmedRef = useRef(false);
 
   indexRef.current = index;
   stepsLenRef.current = steps.length;
   stepIdRef.current = steps[index]!.id;
   stepBonusRef.current = steps[index]!.bonus;
+  holdMsRef.current = steps[index]!.holdMs;
+  sequenceLenRef.current = steps[index]!.sequence?.length ?? 0;
+  seqIndexRef.current = seqIndex;
+  afterWordRef.current = steps[index]!.afterWord;
   onProgressRef.current = onProgress;
   packRef.current = pack;
   trackRef.current = track;
   sessionDoneRef.current = sessionDone;
+  wordPauseRef.current = wordPause != null;
   armedRef.current = armed;
 
   const camera = useCamera(videoRef);
   cameraReadyRef.current = camera.ready;
   const step = steps[index]!;
+  const activeCue = step.sequence?.[seqIndex] ?? {
+    syllable:
+      step.title.includes("·")
+        ? (step.title.split("·").pop()?.trim() ?? step.title)
+        : step.title,
+    handshape: step.handshape,
+    position: step.position,
+  };
 
   const vision = useLpcVision({
     videoRef,
@@ -320,8 +401,8 @@ export function PracticeArena({
     cameraReady: camera.ready,
     enabled: true,
     target: {
-      handshape: sessionDone || !armed ? null : step.handshape,
-      position: sessionDone || !armed ? null : step.position,
+      handshape: sessionDone || wordPause || !armed ? null : activeCue.handshape,
+      position: sessionDone || wordPause || !armed ? null : activeCue.position,
     },
   });
 
@@ -340,7 +421,11 @@ export function PracticeArena({
     setHoldPct(0);
     setFlashOk(false);
     setFlashBonus(false);
-    setArmed(false);
+    const stayArmed = keepArmedRef.current;
+    keepArmedRef.current = false;
+    setArmed(stayArmed);
+    setSeqIndex(0);
+    if (!stayArmed) setWordPause(null);
     if (!customSession) {
       saveTrackCursor(pack, track, index);
     }
@@ -350,6 +435,8 @@ export function PracticeArena({
     setIndex(startIndex);
     setSessionDone(false);
     setArmed(false);
+    setWordPause(null);
+    setSeqIndex(0);
   }, [customSession?.label, track, pack, startIndex]);
 
   useEffect(() => {
@@ -363,30 +450,54 @@ export function PracticeArena({
       const dt = Math.min(100, ts - lastTs.current);
       lastTs.current = ts;
 
-      if (sessionDoneRef.current || completingRef.current) {
+      if (
+        sessionDoneRef.current ||
+        wordPauseRef.current ||
+        completingRef.current
+      ) {
         raf = requestAnimationFrame(tick);
         return;
       }
 
+      const holdNeed = holdMsRef.current;
       const canScore =
         armedRef.current &&
         cameraReadyRef.current &&
         matchAllRef.current;
 
       if (canScore) {
-        holdAcc.current = Math.min(HOLD_MS, holdAcc.current + dt);
+        holdAcc.current = Math.min(holdNeed, holdAcc.current + dt);
       } else {
         holdAcc.current = Math.max(0, holdAcc.current - dt * 1.5);
       }
 
-      const pct = Math.round((holdAcc.current / HOLD_MS) * 100);
+      const pct = Math.round((holdAcc.current / holdNeed) * 100);
       if (pct !== lastUiPct) {
         lastUiPct = pct;
         setHoldPct(pct);
       }
 
-      if (holdAcc.current >= HOLD_MS) {
+      if (holdAcc.current >= holdNeed) {
         completingRef.current = true;
+        const seqLen = sequenceLenRef.current;
+        const curSeq = seqIndexRef.current;
+
+        // Enchaînement : clé suivante sans « Je suis prêt »
+        if (seqLen > 0 && curSeq < seqLen - 1) {
+          setFlashOk(true);
+          window.setTimeout(() => {
+            if (!alive) return;
+            setFlashOk(false);
+            holdAcc.current = 0;
+            lastTs.current = null;
+            completingRef.current = false;
+            setHoldPct(0);
+            setSeqIndex((s) => s + 1);
+          }, 280);
+          raf = requestAnimationFrame(tick);
+          return;
+        }
+
         const isBonus = stepBonusRef.current;
         setFlashOk(true);
         setFlashBonus(isBonus);
@@ -396,9 +507,16 @@ export function PracticeArena({
         addXp(baseXp, packRef.current);
         onProgressRef.current();
 
+        const gate = afterWordRef.current;
         const isLast = indexRef.current >= stepsLenRef.current - 1;
+
         window.setTimeout(() => {
           if (!alive) return;
+          if (gate) {
+            setWordPause({ word: gate.word, restartAt: gate.restartAt });
+            completingRef.current = false;
+            return;
+          }
           if (isLast) {
             if (!customSession) {
               clearTrackCursor(packRef.current, trackRef.current);
@@ -406,6 +524,7 @@ export function PracticeArena({
             setSessionDone(true);
             return;
           }
+          keepArmedRef.current = true;
           setIndex((i) => Math.min(i + 1, stepsLenRef.current - 1));
         }, 650);
       }
@@ -418,7 +537,7 @@ export function PracticeArena({
       alive = false;
       cancelAnimationFrame(raf);
     };
-  }, [track, pack]);
+  }, [track, pack, customSession]);
 
   const restart = () => {
     holdAcc.current = 0;
@@ -430,6 +549,8 @@ export function PracticeArena({
     setArmed(false);
     setIndex(0);
     setSessionDone(false);
+    setWordPause(null);
+    setSeqIndex(0);
     if (!customSession) clearTrackCursor(pack, track);
   };
 
@@ -441,6 +562,29 @@ export function PracticeArena({
     setFlashBonus(false);
     setHoldPct(0);
     setArmed(false);
+    setSeqIndex(0);
+  };
+
+  const continueAfterWord = () => {
+    const isLast = index >= steps.length - 1;
+    setWordPause(null);
+    if (isLast) {
+      if (!customSession) clearTrackCursor(pack, track);
+      setSessionDone(true);
+      return;
+    }
+    setIndex((i) => Math.min(i + 1, steps.length - 1));
+  };
+
+  const restartWord = () => {
+    if (!wordPause) return;
+    const at = wordPause.restartAt;
+    setWordPause(null);
+    holdAcc.current = 0;
+    completingRef.current = false;
+    setFlashOk(false);
+    setSeqIndex(0);
+    setIndex(at);
   };
 
   const handleExit = () => {
@@ -458,11 +602,9 @@ export function PracticeArena({
     : "—";
 
   const lipsLabel =
-    step.handshape && step.position
-      ? step.title.includes("·")
-        ? step.title.split("·").pop()?.trim() ?? step.title
-        : step.title
-      : null;
+    activeCue.handshape && activeCue.position ? activeCue.syllable : null;
+
+  const holdHintSec = (step.holdMs / 1000).toFixed(1);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
@@ -513,28 +655,86 @@ export function PracticeArena({
             </button>
           </div>
         </div>
+      ) : wordPause ? (
+        <div className="shrink-0 rounded-2xl border border-teal/35 bg-teal/10 p-4 text-center sm:p-5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-teal">
+            Mot validé
+          </p>
+          <h2 className="mt-1 font-display text-2xl font-bold text-foam">
+            « {wordPause.word} »
+          </h2>
+          <p className="mt-1 text-sm text-mist">
+            Enchaînement réussi — mot suivant ou une autre tentative ?
+          </p>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={continueAfterWord}
+              className="rounded-full bg-teal px-4 py-2 text-sm font-semibold text-ink"
+            >
+              {index >= steps.length - 1 ? "Terminer" : "Mot suivant"}
+            </button>
+            <button
+              type="button"
+              onClick={restartWord}
+              className="rounded-full border border-panel-2 px-4 py-2 text-sm text-foam"
+            >
+              Recommencer « {wordPause.word} »
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="grid shrink-0 grid-cols-[1fr_auto] items-center gap-3 rounded-2xl border border-panel-2/70 bg-panel/70 p-3 sm:gap-4 sm:p-4">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-sky">
-              {step.guided ? "Cible" : "Rappel"}
+              {step.sequence
+                ? `Enchaînement ${seqIndex + 1}/${step.sequence.length}`
+                : step.guided
+                  ? "Cible"
+                  : "Rappel"}
             </p>
             <h2 className="font-display text-xl font-bold leading-tight sm:text-2xl">
-              {step.title}
+              {step.sequence ? (
+                <>
+                  {step.title}
+                  <span className="mt-0.5 block text-base font-semibold text-teal sm:text-lg">
+                    {step.sequence.map((k, i) => (
+                      <span key={`${k.syllable}-${i}`}>
+                        {i > 0 && (
+                          <span className="text-mist"> → </span>
+                        )}
+                        <span
+                          className={
+                            i === seqIndex
+                              ? "text-teal"
+                              : i < seqIndex
+                                ? "text-ok"
+                                : "text-mist"
+                          }
+                        >
+                          {k.syllable}
+                        </span>
+                      </span>
+                    ))}
+                  </span>
+                </>
+              ) : (
+                step.title
+              )}
             </h2>
             <p className="mt-0.5 line-clamp-2 text-xs text-mist sm:text-sm">
               {step.subtitle}
             </p>
             {step.guided ? (
               <div className="mt-1.5 flex flex-wrap gap-1.5 text-[10px] sm:text-xs">
-                {step.handshape && (
+                {activeCue.handshape && (
                   <span className="rounded-full bg-ink/70 px-2 py-0.5 text-teal">
-                    {packHandshape(pack, step.handshape).label}
+                    {packHandshape(pack, activeCue.handshape).label}
                   </span>
                 )}
-                {step.position && (
+                {activeCue.position && (
                   <span className="rounded-full bg-ink/70 px-2 py-0.5 text-sky">
-                    {packPosition(pack, step.position).label}
+                    {packPosition(pack, activeCue.position).label}
                   </span>
                 )}
               </div>
@@ -546,8 +746,8 @@ export function PracticeArena({
           </div>
           {step.guided ? (
             <CueExample
-              handshape={step.handshape}
-              position={step.position}
+              handshape={activeCue.handshape}
+              position={activeCue.position}
               lipsLabel={lipsLabel}
               compact
             />
@@ -602,7 +802,12 @@ export function PracticeArena({
           </div>
         )}
 
-        {!sessionDone && !armed && camera.ready && !camera.error && !vision.error && (
+        {!sessionDone &&
+          !wordPause &&
+          !armed &&
+          camera.ready &&
+          !camera.error &&
+          !vision.error && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-ink/75 p-4 text-center backdrop-blur-[2px]">
             <p className="max-w-xs text-sm text-foam">
               Regarde d’abord <strong className="text-teal">Forme</strong>,{" "}
@@ -620,7 +825,7 @@ export function PracticeArena({
           </div>
         )}
 
-        {flashOk && !sessionDone && (
+        {flashOk && !sessionDone && !wordPause && (
           <div className="absolute inset-x-0 top-2 z-10 flex justify-center">
             <span className="rounded-full bg-ok px-3 py-1 text-xs font-semibold text-ink shadow-lg">
               {flashBonus ? "Bonus !" : "Bravo !"}
@@ -657,12 +862,12 @@ export function PracticeArena({
           {Math.round(faceZoom * 100)}%
         </span>
       </div>
-      {!sessionDone && (
+      {!sessionDone && !wordPause && (
         <div className="flex shrink-0 flex-col gap-1.5">
           <div className="grid grid-cols-3 gap-1.5 text-center text-[11px] sm:text-xs">
             <div
               className={`rounded-xl border bg-panel/60 px-2 py-1.5 ${
-                step.handshape == null
+                activeCue.handshape == null
                   ? "border-panel-2/70"
                   : vision.reading.matchHand
                     ? "border-ok/50"
@@ -676,7 +881,7 @@ export function PracticeArena({
             </div>
             <div
               className={`rounded-xl border bg-panel/60 px-2 py-1.5 ${
-                step.position == null
+                activeCue.position == null
                   ? "border-panel-2/70"
                   : vision.reading.matchPosition
                     ? "border-ok/50"
@@ -732,7 +937,7 @@ export function PracticeArena({
                   : vision.status === "loading"
                     ? "Modèles…"
                     : step.guided
-                      ? "Tiens la clé ~2 s"
+                      ? `Tiens la clé ~${holdHintSec} s`
                       : "Code de mémoire"}
             </p>
           </div>
