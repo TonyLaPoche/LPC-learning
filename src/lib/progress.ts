@@ -84,6 +84,17 @@ export function saveProgress(state: ProgressState, pack?: PackId) {
   localStorage.setItem(progressKey(id), JSON.stringify(state));
 }
 
+/** Efface toute progression locale (tous packs + curseurs + visites sandbox). */
+export function resetAllProgress(): void {
+  try {
+    localStorage.removeItem(progressKey("fr"));
+    localStorage.removeItem(progressKey("en"));
+    localStorage.removeItem(LEGACY_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function addXp(amount: number, pack?: PackId): ProgressState {
   const id = pack ?? loadPack();
   const next = loadProgress(id);

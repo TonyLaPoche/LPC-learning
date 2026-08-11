@@ -59,6 +59,14 @@ export function clearTrackCursor(pack: PackId, track: LessonTrack): void {
   }
 }
 
+export function clearAllTrackCursors(): void {
+  try {
+    localStorage.removeItem(CURSOR_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function loadIntroSeen(): boolean {
   try {
     return localStorage.getItem(INTRO_KEY) === "1";

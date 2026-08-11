@@ -118,7 +118,11 @@ export default function App() {
         ) : page === "support" ? (
           <SupportPage />
         ) : page === "profile" ? (
-          <ProfilePage progress={progress} pack={pack} />
+          <ProfilePage
+            progress={progress}
+            pack={pack}
+            onProgressChange={setProgress}
+          />
         ) : (
           <HomeScreen
             progress={progress}

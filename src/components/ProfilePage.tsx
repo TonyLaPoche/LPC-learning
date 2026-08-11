@@ -1,17 +1,30 @@
+import { useState } from "react";
 import {
   achievementStats,
   computeAchievements,
+  isAchievementWired,
 } from "@/lib/achievements";
 import { packById, type PackId } from "@/data/packs";
-import type { ProgressState } from "@/lib/progress";
-import { loadCustomVisited, loadFreeVisited } from "@/lib/visits";
+import { loadProgress, resetAllProgress, type ProgressState } from "@/lib/progress";
+import { clearAllTrackCursors } from "@/lib/trackProgress";
+import {
+  clearVisitFlags,
+  loadCustomVisited,
+  loadFreeVisited,
+} from "@/lib/visits";
 
 type ProfilePageProps = {
   progress: ProgressState;
   pack: PackId;
+  onProgressChange: (next: ProgressState) => void;
 };
 
-export function ProfilePage({ progress, pack }: ProfilePageProps) {
+export function ProfilePage({
+  progress,
+  pack,
+  onProgressChange,
+}: ProfilePageProps) {
+  const [confirmReset, setConfirmReset] = useState(false);
   const freeVisited = loadFreeVisited();
   const customVisited = loadCustomVisited();
   const achievements = computeAchievements(
@@ -29,6 +42,14 @@ export function ProfilePage({ progress, pack }: ProfilePageProps) {
         year: "numeric",
       })
     : "—";
+
+  const doReset = () => {
+    resetAllProgress();
+    clearAllTrackCursors();
+    clearVisitFlags();
+    onProgressChange(loadProgress(pack));
+    setConfirmReset(false);
+  };
 
   return (
     <div className="space-y-6 pb-2">
@@ -63,31 +84,89 @@ export function ProfilePage({ progress, pack }: ProfilePageProps) {
       <section>
         <h2 className="mb-3 font-display text-lg font-bold">Succès</h2>
         <ul className="space-y-2">
-          {achievements.map((a) => (
-            <li
-              key={a.id}
-              className={`rounded-2xl border p-3 ${
-                a.unlocked
-                  ? "border-teal/40 bg-teal/10"
-                  : "border-panel-2/60 bg-panel/40 opacity-70"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p
-                    className={`font-semibold ${a.unlocked ? "text-teal" : "text-mist"}`}
-                  >
-                    {a.title}
-                  </p>
-                  <p className="mt-0.5 text-xs text-mist">{a.description}</p>
+          {achievements.map((a) => {
+            const wired = isAchievementWired(a);
+            return (
+              <li
+                key={a.id}
+                className={`rounded-2xl border p-3 ${
+                  !wired
+                    ? "border-panel-2/40 bg-panel/25 opacity-45"
+                    : a.unlocked
+                      ? "border-teal/40 bg-teal/10"
+                      : "border-panel-2/60 bg-panel/40 opacity-70"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p
+                      className={`font-semibold ${
+                        !wired
+                          ? "text-mist/70"
+                          : a.unlocked
+                            ? "text-teal"
+                            : "text-mist"
+                      }`}
+                    >
+                      {a.title}
+                      {!wired && (
+                        <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-amber-200/80">
+                          Bientôt
+                        </span>
+                      )}
+                    </p>
+                    <p className="mt-0.5 text-xs text-mist">{a.description}</p>
+                  </div>
+                  <span className="shrink-0 text-lg" aria-hidden>
+                    {!wired ? "∅" : a.unlocked ? "✓" : "·"}
+                  </span>
                 </div>
-                <span className="shrink-0 text-lg" aria-hidden>
-                  {a.unlocked ? "✓" : "·"}
-                </span>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
+      </section>
+
+      <section className="rounded-2xl border border-coral/30 bg-coral/5 p-4">
+        <h2 className="font-display text-lg font-bold text-foam">
+          Zone sensible
+        </h2>
+        <p className="mt-1 text-sm text-mist">
+          Efface XP, leçons validées, succès et reprises — pour{" "}
+          <strong className="text-foam">tous les packs</strong> sur cet
+          appareil.
+        </p>
+        {!confirmReset ? (
+          <button
+            type="button"
+            onClick={() => setConfirmReset(true)}
+            className="mt-3 rounded-full border border-coral/50 px-4 py-2 text-sm font-semibold text-coral hover:bg-coral/10"
+          >
+            Reset ma progression
+          </button>
+        ) : (
+          <div className="mt-3 space-y-2">
+            <p className="text-sm font-medium text-coral">
+              Confirmer ? Action irréversible.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={doReset}
+                className="rounded-full bg-coral px-4 py-2 text-sm font-semibold text-ink"
+              >
+                Oui, tout effacer
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmReset(false)}
+                className="rounded-full border border-panel-2 px-4 py-2 text-sm text-mist hover:text-foam"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

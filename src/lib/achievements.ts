@@ -1,7 +1,7 @@
 /** Achievements dérivés de la progression locale — par pack. */
 
 import type { PackId } from "@/data/packs";
-import { getPackContent } from "@/data/packs";
+import { getPackContent, PACK_WIP } from "@/data/packs";
 import type { ProgressState } from "@/lib/progress";
 
 export type Achievement = {
@@ -9,6 +9,8 @@ export type Achievement = {
   title: string;
   description: string;
   unlocked: boolean;
+  /** false = grisé, hors progression (non branché). Défaut : true. */
+  wired?: boolean;
 };
 
 function countPrefix(completed: string[], prefix: string): number {
@@ -53,12 +55,17 @@ function syllableRegex(pack: PackId): RegExp {
 }
 
 function wordKeyRegex(pack: PackId): RegExp {
-  const ids = getPackContent(pack).words.map((w) => w.id).join("|");
-  return new RegExp(`^(${ids})(-\\d+)?$`);
+  const ids = getPackContent(pack)
+    .words.map((w) => w.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+  // Ancien : mot-0 · Nouveau : mot-learn-0 / mot-chain
+  return new RegExp(`^(${ids})(-(\\d+|learn-\\d+|chain))?$`);
 }
 
 function phraseKeyRegex(pack: PackId): RegExp {
-  const ids = getPackContent(pack).phrases.map((p) => p.id).join("|");
+  const ids = getPackContent(pack)
+    .phrases.map((p) => p.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
   return new RegExp(`^(${ids})-\\d+$`);
 }
 
@@ -221,30 +228,46 @@ function packAchievements(
   ];
 
   if (pack === "en") {
+    const enReady = !PACK_WIP.en;
     shared.push(
       {
         id: "en-hello",
         title: "Hello!",
-        description: "Cue the word « hello »",
-        unlocked: completed.some((id) => id.startsWith("hello")),
+        description: enReady
+          ? "Cue the word « hello »"
+          : "Pack EN bientôt — non disponible",
+        unlocked: enReady && completed.some((id) => id.startsWith("hello")),
+        wired: enReady,
       },
       {
         id: "en-thank-you",
         title: "Polite cue",
-        description: "Cue « Thank you »",
-        unlocked: completed.some((id) => id.startsWith("thank-you")),
+        description: enReady
+          ? "Cue « Thank you »"
+          : "Pack EN bientôt — non disponible",
+        unlocked:
+          enReady && completed.some((id) => id.startsWith("thank-you")),
+        wired: enReady,
       },
       {
         id: "en-love",
         title: "Love cue",
-        description: "Cue « I love you »",
-        unlocked: completed.some((id) => id.startsWith("i-love-you")),
+        description: enReady
+          ? "Cue « I love you »"
+          : "Pack EN bientôt — non disponible",
+        unlocked:
+          enReady && completed.some((id) => id.startsWith("i-love-you")),
+        wired: enReady,
       },
       {
         id: "en-good-night",
         title: "Night owl",
-        description: "Cue « Good night »",
-        unlocked: completed.some((id) => id.startsWith("good-night")),
+        description: enReady
+          ? "Cue « Good night »"
+          : "Pack EN bientôt — non disponible",
+        unlocked:
+          enReady && completed.some((id) => id.startsWith("good-night")),
+        wired: enReady,
       },
     );
   } else {
@@ -282,7 +305,12 @@ export function computeAchievements(
   return packAchievements(pack, progress, freeVisited, customVisited);
 }
 
+export function isAchievementWired(a: Achievement): boolean {
+  return a.wired !== false;
+}
+
 export function achievementStats(achievements: Achievement[]) {
-  const unlocked = achievements.filter((a) => a.unlocked).length;
-  return { unlocked, total: achievements.length };
+  const active = achievements.filter(isAchievementWired);
+  const unlocked = active.filter((a) => a.unlocked).length;
+  return { unlocked, total: active.length };
 }

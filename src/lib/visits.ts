@@ -32,3 +32,12 @@ export function markCustomVisited() {
     /* ignore */
   }
 }
+
+export function clearVisitFlags() {
+  try {
+    localStorage.removeItem(FREE_VISITED_KEY);
+    localStorage.removeItem(CUSTOM_VISITED_KEY);
+  } catch {
+    /* ignore */
+  }
+}
