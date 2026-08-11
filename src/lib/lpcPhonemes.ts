@@ -13,7 +13,7 @@ export type CueToken = {
 
 /**
  * Configs 1–8 (ALPC) :
- * 1 index · 2 index+majeur · 3 trois doigts (index plié) · 4 quatre doigts ·
+ * 1 index · 2 index+majeur · 3 trois doigts (pouce+index pliés) · 4 quatre doigts ·
  * 5 cinq doigts / ∅ · 6 L · 7 pouce+2 · 8 V
  */
 const CONSONANT_SHAPE: Record<string, HandshapeId> = {
@@ -40,28 +40,28 @@ const CONSONANT_SHAPE: Record<string, HandshapeId> = {
   Ng: "c8", // ŋ (rare en FR)
 };
 
-/** Voyelles → position (ALPC) */
+/** Voyelles → position (affiche LPC : œil / côté / bouche / menton / gorge) */
 const VOWEL_POS: Record<string, PositionId> = {
-  // Côté
-  a: "side",
-  o: "side",
-  "9": "side", // œ
-  "@": "side", // ə
-  // Pommette
+  // Œil — in · eu
   "e~": "cheek", // ɛ̃
   eu: "cheek", // ø
-  // Bouche
+  "9": "cheek", // œ (proche eu)
+  // Côté — a · e · ô
+  a: "side",
+  "@": "side", // ə (e)
+  o: "side", // ô
+  // Bouche — i · an · on
   i: "mouth",
   "o~": "mouth", // ɔ̃
   "a~": "mouth", // ɑ̃
-  // Menton
+  // Menton — è · o · ou
   E: "chin", // ɛ
-  u: "chin",
-  O: "chin", // ɔ
-  // Gorge
-  y: "throat",
-  e: "throat",
+  O: "chin", // ɔ (o ouvert)
+  u: "chin", // ou /u/
+  // Gorge — é · un · u
+  e: "throat", // é
   "eu~": "throat", // œ̃
+  y: "throat", // u /y/
 };
 
 const EMPTY_SHAPE: HandshapeId = "c5"; // config 5 = aussi voyelle seule

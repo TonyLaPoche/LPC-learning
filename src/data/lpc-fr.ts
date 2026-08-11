@@ -67,7 +67,7 @@ export const HANDSHAPES: HandshapeDef[] = [
   {
     id: "c3",
     label: "Trois doigts",
-    hint: "Majeur, annulaire et auriculaire tendus — index plié",
+    hint: "Pouce et index pliés — majeur, annulaire et auriculaire tendus (s, r)",
     consonants: ["s", "ʁ"],
   },
   {
@@ -104,34 +104,34 @@ export const HANDSHAPES: HandshapeDef[] = [
 
 export const POSITIONS: PositionDef[] = [
   {
-    id: "side",
-    label: "Côté",
-    hint: "À côté du visage, hauteur des yeux / tempe — aussi consonne seule",
-    vowels: ["a", "o", "œ", "ə"],
+    id: "cheek",
+    label: "Œil",
+    hint: "Coin externe de l’œil — voyelles in · eu",
+    vowels: ["in", "eu"],
   },
   {
-    id: "cheek",
-    label: "Pommette",
-    hint: "Sous l’œil / pommette — pas jusqu’à la bouche",
-    vowels: ["ɛ̃", "ø"],
+    id: "side",
+    label: "Côté",
+    hint: "À côté du visage — voyelles a · e · ô (aussi consonne seule)",
+    vowels: ["a", "e", "ô"],
   },
   {
     id: "mouth",
     label: "Bouche",
-    hint: "Au coin de la bouche (commissure)",
-    vowels: ["i", "ɔ̃", "ɑ̃"],
+    hint: "Coin de la bouche (commissure) — voyelles i · an · on",
+    vowels: ["i", "an", "on"],
   },
   {
     id: "chin",
     label: "Menton",
-    hint: "Contre ou juste sous le menton",
-    vowels: ["ɛ", "ou (/u/)", "ɔ"],
+    hint: "Contre ou juste sous le menton — voyelles è · o · ou",
+    vowels: ["è", "o", "ou"],
   },
   {
     id: "throat",
     label: "Gorge",
-    hint: "Sous le menton, côté gorge / cou",
-    vowels: ["u (/y/)", "é", "œ̃"],
+    hint: "Sous le menton / gorge — voyelles é · un · u",
+    vowels: ["é", "un", "u"],
   },
 ];
 
@@ -302,7 +302,7 @@ export const SYLLABLE_DRILLS: DrillItem[] = [
     label: "Voyelle in",
     display: "in",
     cue: { handshape: "c5", position: "cheek" },
-    tip: "Cinq doigts (∅) + pommette",
+    tip: "Cinq doigts (∅) + œil",
   },
   {
     id: "é",

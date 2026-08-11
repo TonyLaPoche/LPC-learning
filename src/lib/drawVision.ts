@@ -58,7 +58,7 @@ const ZONE_LABELS: Record<PositionId, string> = {
   side: "Côté",
   chin: "Menton",
   mouth: "Bouche",
-  cheek: "Pommette",
+  cheek: "Œil",
   throat: "Gorge",
 };
 
@@ -141,4 +141,17 @@ export function drawPointerMarker(
   ctx.strokeStyle = "white";
   ctx.lineWidth = 2;
   ctx.stroke();
+}
+
+/** Un rond sur chaque extrémité utile (c2 = index + majeur, etc.). */
+export function drawPointerMarkers(
+  ctx: CanvasRenderingContext2D,
+  pointers: Point[],
+  w: number,
+  h: number,
+  ok: boolean,
+) {
+  for (const pointer of pointers) {
+    drawPointerMarker(ctx, pointer, w, h, ok);
+  }
 }

@@ -49,7 +49,7 @@ const VOWEL_RULES: Array<{ g: string; pos: PositionId }> = [
   { g: "es", pos: "chin" },
   { g: "our", pos: "chin" },
   { g: "oir", pos: "side" },
-  { g: "eur", pos: "side" },
+  { g: "eur", pos: "cheek" },
   { g: "aur", pos: "side" },
   { g: "an", pos: "mouth" },
   { g: "en", pos: "mouth" },
@@ -66,7 +66,7 @@ const VOWEL_RULES: Array<{ g: string; pos: PositionId }> = [
   { g: "oi", pos: "side" }, // /wa/ → a côté, forme w
   { g: "ui", pos: "mouth" },
   { g: "eu", pos: "cheek" },
-  { g: "œu", pos: "side" },
+  { g: "œu", pos: "cheek" },
   { g: "ai", pos: "chin" },
   { g: "ei", pos: "chin" },
   { g: "ay", pos: "chin" },

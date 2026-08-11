@@ -1,5 +1,11 @@
 import type { PositionId } from "@/data/lpc-fr";
-import { dist, highestFingerTip, type Point } from "@/lib/handGeometry";
+import {
+  centroidOfPoints,
+  cueFingerTips,
+  dist,
+  type Point,
+} from "@/lib/handGeometry";
+import { CALIBRATED_ZONE_REL, relToRect } from "@/lib/zoneCalibration";
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision";
 
 /** Indices Face Mesh utiles (MediaPipe). */
@@ -53,7 +59,10 @@ export function faceAnchors(
 export type PositionGuess = {
   id: PositionId | null;
   confidence: number;
+  /** Centroïde des bouts utiles (hit-test zone). */
   pointer: Point | null;
+  /** Tous les bouts de doigts étendus (rendu des ronds). */
+  pointers: Point[];
 };
 
 export function pointInRect(p: Point, r: NormRect): boolean {
@@ -67,144 +76,115 @@ function rectCenter(r: NormRect): Point {
 }
 
 /**
- * Zones LPC en rectangles non superposés :
- * - Centre vertical : bouche → menton → gorge (empilés, bords joints)
- * - Latéral : joue (dans le visage) | côté (hors visage), séparés à la joue
+ * Zones LPC calibrées (un seul côté : droite écran / main dominante).
+ * Offsets relatifs au nez — cf. CALIBRATED_ZONE_REL.
  */
 export function buildZoneRects(
   anchors: FaceAnchors,
 ): Record<PositionId, NormRect[]> {
-  const midX = anchors.nose.x;
-  const fw = anchors.faceWidth;
-  const faceL = Math.min(anchors.cheekL.x, anchors.templeL.x);
-  const faceR = Math.max(anchors.cheekR.x, anchors.templeR.x);
-
-  const colHalf = fw * 0.2;
-  const colL = midX - colHalf;
-  const colR = midX + colHalf;
-  const colW = Math.max(0.02, colR - colL);
-
-  // Centre : bouche (commissure) → menton → gorge
-  // Pommette : bande sous l’œil, au-dessus de la bouche
-  const mouthY = anchors.mouth.y;
-  const mouthH = fw * 0.14;
-  const mouth: NormRect = {
-    x: colL - fw * 0.06,
-    y: mouthY - mouthH * 0.45,
-    w: colW + fw * 0.12,
-    h: mouthH,
-  };
-  const chinTop = mouth.y + mouth.h;
-  const chinBot = anchors.chin.y + fw * 0.04;
-  const chin: NormRect = {
-    x: colL,
-    y: chinTop,
-    w: colW,
-    h: Math.max(0.02, chinBot - chinTop),
-  };
-  const throatGap = fw * 0.07;
-  const throatTop = chinBot + throatGap;
-  const throatBot = throatTop + fw * 0.48;
-  const throat: NormRect = {
-    x: colL,
-    y: throatTop,
-    w: colW,
-    h: Math.max(0.02, throatBot - throatTop),
-  };
-
-  // Pommette : sous les yeux / tempe basse → arrêt avant la bouche
-  const bandTop = Math.min(anchors.templeL.y, anchors.templeR.y) + fw * 0.02;
-  const bandBot = Math.min(mouthY - fw * 0.06, anchors.nose.y + fw * 0.16);
-  const bandH = Math.max(0.04, bandBot - bandTop);
-  const sideW = fw * 0.42;
-
-  const cheekL: NormRect = {
-    x: faceL,
-    y: bandTop,
-    w: Math.max(0.02, colL - faceL),
-    h: bandH,
-  };
-  const cheekR: NormRect = {
-    x: colR,
-    y: bandTop,
-    w: Math.max(0.02, faceR - colR),
-    h: bandH,
-  };
-  const sideL: NormRect = {
-    x: faceL - sideW,
-    y: bandTop,
-    w: sideW,
-    h: bandH,
-  };
-  const sideR: NormRect = {
-    x: faceR,
-    y: bandTop,
-    w: sideW,
-    h: bandH,
-  };
-
-  return {
-    mouth: [mouth],
-    chin: [chin],
-    throat: [throat],
-    cheek: [cheekL, cheekR],
-    side: [sideL, sideR],
-  };
+  const out = {} as Record<PositionId, NormRect[]>;
+  for (const id of Object.keys(CALIBRATED_ZONE_REL) as PositionId[]) {
+    out[id] = CALIBRATED_ZONE_REL[id].map((r) => relToRect(r, anchors));
+  }
+  return out;
 }
 
 /**
- * Hit-test rectangles non superposés + score de confiance (proximité du centre).
+ * Combien de tips doivent toucher la zone pour valider un hit.
+ * c5 (5 doigts) → 2 suffisent ; c1 (1 tip) → 1 ; c2 (2) → 1.
+ */
+function minTipsInZone(tipCount: number): number {
+  if (tipCount <= 1) return 1;
+  if (tipCount === 2) return 1;
+  return 2;
+}
+
+/**
+ * Hit-test rectangles : compte les tips étendus dans chaque zone
+ * (pas le centroïde seul — avec c5 le centre tombe souvent hors zone
+ * alors que 2 doigts sont déjà correctement placés).
  */
 export function classifyCuePosition(
   hand: NormalizedLandmark[] | null,
   face: NormalizedLandmark[] | null,
 ): PositionGuess {
   if (!hand?.length) {
-    return { id: null, confidence: 0, pointer: null };
+    return { id: null, confidence: 0, pointer: null, pointers: [] };
   }
-  const pointer = highestFingerTip(hand);
+  const pointers = cueFingerTips(hand);
+  const pointer = centroidOfPoints(pointers);
   const anchors = faceAnchors(face);
   if (!anchors) {
-    return { id: null, confidence: 0, pointer };
+    return { id: null, confidence: 0, pointer, pointers };
   }
 
   const zones = buildZoneRects(anchors);
-  const hits: Array<{ id: PositionId; score: number }> = [];
+  const need = minTipsInZone(pointers.length);
+  const hits: Array<{
+    id: PositionId;
+    score: number;
+    tipCount: number;
+    hitPointer: Point;
+  }> = [];
 
   for (const id of Object.keys(zones) as PositionId[]) {
     for (const rect of zones[id]) {
-      if (!pointInRect(pointer, rect)) continue;
+      const inside = pointers.filter((p) => pointInRect(p, rect));
+      if (inside.length < need) continue;
+      const hitPointer = centroidOfPoints(inside);
       const c = rectCenter(rect);
       const fw = anchors.faceWidth;
-      const d = dist(pointer, c) / fw;
-      // Dans le rectangle : score élevé, meilleur près du centre
-      const score = 0.75 + 0.25 * (1 - Math.min(1, d / 0.35));
-      hits.push({ id, score });
+      const d = dist(hitPointer, c) / fw;
+      const proximity = 1 - Math.min(1, d / 0.4);
+      const coverage = inside.length / pointers.length;
+      // Couverture tips + proximité du sous-centroïde dans la zone
+      const score = 0.45 + 0.35 * coverage + 0.2 * proximity;
+      hits.push({ id, score, tipCount: inside.length, hitPointer });
     }
   }
 
   if (hits.length === 0) {
-    // Soft fallback : zone dont le centre est le plus proche (rayon limité)
-    let best: { id: PositionId; score: number } | null = null;
+    // Fallback : zone avec le plus de tips (même 1), seuil plus bas
+    let best: {
+      id: PositionId;
+      score: number;
+      hitPointer: Point;
+    } | null = null;
     for (const id of Object.keys(zones) as PositionId[]) {
       for (const rect of zones[id]) {
+        const inside = pointers.filter((p) => pointInRect(p, rect));
+        if (inside.length === 0) continue;
+        const hitPointer = centroidOfPoints(inside);
         const c = rectCenter(rect);
-        const d = dist(pointer, c) / anchors.faceWidth;
-        const score = 1 - Math.min(1, d / 0.45);
-        if (!best || score > best.score) best = { id, score };
+        const d = dist(hitPointer, c) / anchors.faceWidth;
+        const proximity = 1 - Math.min(1, d / 0.45);
+        const coverage = inside.length / pointers.length;
+        const score = 0.35 * coverage + 0.65 * proximity;
+        if (!best || score > best.score) {
+          best = { id, score, hitPointer };
+        }
       }
     }
-    if (!best || best.score < 0.45) {
-      return { id: null, confidence: 0, pointer };
+    if (!best || best.score < 0.35) {
+      return { id: null, confidence: 0, pointer, pointers };
     }
-    return { id: best.id, confidence: best.score * 0.7, pointer };
+    return {
+      id: best.id,
+      confidence: Math.min(1, best.score * 0.85),
+      pointer: best.hitPointer,
+      pointers,
+    };
   }
 
-  hits.sort((a, b) => b.score - a.score);
+  hits.sort((a, b) => {
+    if (b.tipCount !== a.tipCount) return b.tipCount - a.tipCount;
+    return b.score - a.score;
+  });
   const top = hits[0]!;
   return {
     id: top.id,
     confidence: Math.min(1, top.score),
-    pointer,
+    pointer: top.hitPointer,
+    pointers,
   };
 }

@@ -39,6 +39,40 @@ export function palmCenter(landmarks: NormalizedLandmark[]): Point {
 const FINGER_TIPS = [4, 8, 12, 16, 20] as const;
 
 /**
+ * Extrémités LPC utiles : un rond sur chaque doigt étendu
+ * (ex. c2 = index + majeur, pas seulement le plus haut).
+ */
+export function cueFingerTips(landmarks: NormalizedLandmark[]): Point[] {
+  const state = fingerState(landmarks);
+  const flags = [
+    state.thumb,
+    state.index,
+    state.middle,
+    state.ring,
+    state.pinky,
+  ];
+  const tips: Point[] = [];
+  for (let i = 0; i < FINGER_TIPS.length; i++) {
+    if (!flags[i]) continue;
+    const tip = landmarks[FINGER_TIPS[i]!];
+    if (tip) tips.push({ x: tip.x, y: tip.y });
+  }
+  if (tips.length > 0) return tips;
+  return [highestFingerTip(landmarks)];
+}
+
+export function centroidOfPoints(points: Point[]): Point {
+  const n = Math.max(1, points.length);
+  let x = 0;
+  let y = 0;
+  for (const p of points) {
+    x += p.x;
+    y += p.y;
+  }
+  return { x: x / n, y: y / n };
+}
+
+/**
  * Pointeur LPC : bout du doigt le plus haut à l’écran (y min).
  * Préfère les doigts étendus ; sinon tous les tips.
  */
@@ -98,22 +132,99 @@ export function isFingerExtended(
   return tipDist > pipDist * 1.05 && tipFromMcp > pipFromMcp * 1.1;
 }
 
-export function isThumbExtended(landmarks: NormalizedLandmark[]): boolean {
+function distPointToLine(p: Point, a: Point, b: Point): number {
+  const abx = b.x - a.x;
+  const aby = b.y - a.y;
+  const apx = p.x - a.x;
+  const apy = p.y - a.y;
+  const ab2 = abx * abx + aby * aby + 1e-8;
+  let t = (apx * abx + apy * aby) / ab2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(apx - t * abx, apy - t * aby);
+}
+
+type ThumbMode = "strict" | "lShape" | "twoFinger" | "openHand";
+
+/**
+ * Pouce étendu vs rentré.
+ * Échelles = largeur de main + longueur d’index (stables face caméra).
+ * - `openHand` : 4 doigts (c4/c5)
+ * - `lShape` : index seul (c1/c6)
+ * - `twoFinger` : index+majeur (c2/c7) — même sensibilité viewpoint que le L
+ * - `strict` : autres cas
+ */
+export function isThumbExtended(
+  landmarks: NormalizedLandmark[],
+  mode: ThumbMode = "strict",
+): boolean {
   const tip = landmarks[4];
   const ip = landmarks[3];
   const mcp = landmarks[2];
-  const wrist = landmarks[0];
+  const cmc = landmarks[1];
   const indexMcp = landmarks[5];
-  if (!tip || !ip || !mcp || !wrist || !indexMcp) return false;
-  const tipToIndex = dist(
-    { x: tip.x, y: tip.y },
-    { x: indexMcp.x, y: indexMcp.y },
-  );
-  const mcpToIndex = dist(
-    { x: mcp.x, y: mcp.y },
-    { x: indexMcp.x, y: indexMcp.y },
-  );
-  return tipToIndex > mcpToIndex * 1.15;
+  const indexTip = landmarks[8];
+  const pinkyMcp = landmarks[17];
+  if (!tip || !ip || !mcp || !cmc || !indexMcp || !indexTip || !pinkyMcp) {
+    return false;
+  }
+
+  const tipP = { x: tip.x, y: tip.y };
+  const ipP = { x: ip.x, y: ip.y };
+  const mcpP = { x: mcp.x, y: mcp.y };
+  const cmcP = { x: cmc.x, y: cmc.y };
+  const indexMcpP = { x: indexMcp.x, y: indexMcp.y };
+  const indexTipP = { x: indexTip.x, y: indexTip.y };
+  const pinkyMcpP = { x: pinkyMcp.x, y: pinkyMcp.y };
+
+  const handWidth = Math.max(1e-4, dist(indexMcpP, pinkyMcpP));
+  const indexLen = Math.max(1e-4, dist(indexMcpP, indexTipP));
+  const scale = Math.max(handWidth, indexLen * 0.55);
+
+  const thr =
+    mode === "openHand"
+      ? {
+          tipIndex: 0.36,
+          stretch: 1.06,
+          angleDeg: 32,
+          lateral: 0.32,
+          outPinky: 1.0,
+        }
+      : mode === "lShape" || mode === "twoFinger"
+        ? {
+            tipIndex: 0.34,
+            stretch: 1.05,
+            angleDeg: 32,
+            lateral: 0.36,
+            outPinky: 1.0,
+          }
+        : {
+            tipIndex: 0.42,
+            stretch: 1.1,
+            angleDeg: 40,
+            lateral: 0.45,
+            outPinky: 1.04,
+          };
+
+  if (dist(tipP, indexMcpP) / scale < thr.tipIndex) return false;
+  if (dist(tipP, cmcP) < dist(ipP, cmcP) * thr.stretch) return false;
+
+  const vThumb = { x: tipP.x - mcpP.x, y: tipP.y - mcpP.y };
+  const vIndex = { x: indexTipP.x - indexMcpP.x, y: indexTipP.y - indexMcpP.y };
+  const denom =
+    Math.hypot(vThumb.x, vThumb.y) * Math.hypot(vIndex.x, vIndex.y) + 1e-6;
+  const cos = (vThumb.x * vIndex.x + vThumb.y * vIndex.y) / denom;
+  const angle = Math.acos(Math.min(1, Math.max(-1, cos)));
+  if (angle < (thr.angleDeg * Math.PI) / 180) return false;
+
+  if (distPointToLine(tipP, indexMcpP, indexTipP) / handWidth < thr.lateral) {
+    return false;
+  }
+
+  if (dist(tipP, pinkyMcpP) < dist(indexMcpP, pinkyMcpP) * thr.outPinky) {
+    return false;
+  }
+
+  return true;
 }
 
 export type FingerState = {
@@ -125,11 +236,27 @@ export type FingerState = {
 };
 
 export function fingerState(landmarks: NormalizedLandmark[]): FingerState {
+  const index = isFingerExtended(landmarks, 8, 6, 5);
+  const middle = isFingerExtended(landmarks, 12, 10, 9);
+  const ring = isFingerExtended(landmarks, 16, 14, 13);
+  const pinky = isFingerExtended(landmarks, 20, 18, 17);
+
+  const openHand = index && middle && ring && pinky;
+  const lCandidate = index && !middle && !ring && !pinky;
+  const twoFinger = index && middle && !ring && !pinky;
+  const mode: ThumbMode = openHand
+    ? "openHand"
+    : lCandidate
+      ? "lShape"
+      : twoFinger
+        ? "twoFinger"
+        : "strict";
+
   return {
-    thumb: isThumbExtended(landmarks),
-    index: isFingerExtended(landmarks, 8, 6, 5),
-    middle: isFingerExtended(landmarks, 12, 10, 9),
-    ring: isFingerExtended(landmarks, 16, 14, 13),
-    pinky: isFingerExtended(landmarks, 20, 18, 17),
+    thumb: isThumbExtended(landmarks, mode),
+    index,
+    middle,
+    ring,
+    pinky,
   };
 }

@@ -16,6 +16,11 @@ type HomeScreenProps = {
   pack: PackId;
   onPackChange: (pack: PackId) => void;
   onStart: (track: LessonTrack, resumeIndex?: number) => void;
+  /** Uniquement en mode développement. */
+  onOpenDebugZones?: () => void;
+  onOpenDebugHands?: () => void;
+  onOpenDebugPositions?: () => void;
+  onOpenDebugSyllables?: () => void;
 };
 
 function statusBadge(stats: TrackStats): { label: string; className: string } {
@@ -42,6 +47,10 @@ export function HomeScreen({
   pack,
   onPackChange,
   onStart,
+  onOpenDebugZones,
+  onOpenDebugHands,
+  onOpenDebugPositions,
+  onOpenDebugSyllables,
 }: HomeScreenProps) {
   const [showIntro, setShowIntro] = useState(() => !loadIntroSeen());
   const lessons = TRACKS.filter((t) => t.kind === "lesson" && !t.hidden);
@@ -158,6 +167,111 @@ export function HomeScreen({
             </button>
           )}
         </div>
+      )}
+
+      {(onOpenDebugZones ||
+        onOpenDebugHands ||
+        onOpenDebugPositions ||
+        onOpenDebugSyllables) && (
+        <section>
+          <h2 className="mb-2 font-display text-lg font-bold text-amber-200">
+            Debug
+          </h2>
+          <p className="mb-3 text-sm text-mist">
+            Outils internes — visibles uniquement en développement.
+          </p>
+          <div className="space-y-3">
+            {onOpenDebugZones && (
+              <button
+                type="button"
+                onClick={onOpenDebugZones}
+                className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-amber-400/45 bg-amber-400/10 p-5 text-left transition hover:border-amber-300/70 hover:bg-amber-400/15"
+              >
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-amber-200">
+                    Outil 1
+                  </p>
+                  <h3 className="mt-1 font-display text-xl font-bold">
+                    Placement des zones
+                  </h3>
+                  <p className="mt-1 text-sm text-mist">
+                    Drag & drop des rectangles trigger sur ta caméra, export
+                    JSON.
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-amber-300 px-3 py-1 text-xs font-semibold text-ink">
+                  Ouvrir
+                </span>
+              </button>
+            )}
+            {onOpenDebugHands && (
+              <button
+                type="button"
+                onClick={onOpenDebugHands}
+                className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-amber-400/45 bg-amber-400/10 p-5 text-left transition hover:border-amber-300/70 hover:bg-amber-400/15"
+              >
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-amber-200">
+                    Outil 2
+                  </p>
+                  <h3 className="mt-1 font-display text-xl font-bold">
+                    Placement des doigts
+                  </h3>
+                  <p className="mt-1 text-sm text-mist">
+                    Scanner une forme c1–c8 ; JSON si mismatch détection.
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-amber-300 px-3 py-1 text-xs font-semibold text-ink">
+                  Ouvrir
+                </span>
+              </button>
+            )}
+            {onOpenDebugPositions && (
+              <button
+                type="button"
+                onClick={onOpenDebugPositions}
+                className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-amber-400/45 bg-amber-400/10 p-5 text-left transition hover:border-amber-300/70 hover:bg-amber-400/15"
+              >
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-amber-200">
+                    Outil 3
+                  </p>
+                  <h3 className="mt-1 font-display text-xl font-bold">
+                    Positions voyelles
+                  </h3>
+                  <p className="mt-1 text-sm text-mist">
+                    Scanner une zone (5 positions) ; JSON si mismatch.
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-amber-300 px-3 py-1 text-xs font-semibold text-ink">
+                  Ouvrir
+                </span>
+              </button>
+            )}
+            {onOpenDebugSyllables && (
+              <button
+                type="button"
+                onClick={onOpenDebugSyllables}
+                className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-amber-400/45 bg-amber-400/10 p-5 text-left transition hover:border-amber-300/70 hover:bg-amber-400/15"
+              >
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-amber-200">
+                    Outil 4
+                  </p>
+                  <h3 className="mt-1 font-display text-xl font-bold">
+                    Syllabes (clé complète)
+                  </h3>
+                  <p className="mt-1 text-sm text-mist">
+                    Forme + zone comme le parcours ; JSON si mismatch.
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-amber-300 px-3 py-1 text-xs font-semibold text-ink">
+                  Ouvrir
+                </span>
+              </button>
+            )}
+          </div>
+        </section>
       )}
 
       <section>

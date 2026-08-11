@@ -46,11 +46,11 @@ Source de vérité : affiche « Clés du code LPC » (FR/CH) + [Montre le son](h
 
 | Id | Zone | Voyelles |
 |----|------|----------|
-| `cheek` | Pommette | ɛ̃ (in), ø (eu) |
-| `side` | Côté | a, o, œ (e) — aussi consonne seule / e muet |
-| `mouth` | Bouche | i, ɔ̃ (on), ɑ̃ (an) |
-| `chin` | Menton | ɛ (è), u (ou), ɔ (o ouvert) |
-| `throat` | Gorge | y (u), e (é), œ̃ (un) |
+| `cheek` | Œil | in, eu |
+| `side` | Côté | a, e, ô — aussi consonne seule |
+| `mouth` | Bouche | i, an, on |
+| `chin` | Menton | è, o, ou |
+| `throat` | Gorge | é, un, u |
 
 ### Configurations (consonnes)
 
@@ -61,7 +61,7 @@ Source de vérité : affiche « Clés du code LPC » (FR/CH) + [Montre le son](h
 | `c4` | Quatre doigts serrés | b, n, ɥ |
 | `c6` | Forme L (pouce + index) | l, ʃ, ɲ, w |
 | `c2` | Index + majeur jointifs | k, v, z |
-| `c3` | Trois doigts (index plié) | s, ʁ |
+| `c3` | Trois doigts (pouce + index pliés) | s, ʁ |
 | `c7` | Pouce + index + majeur jointifs | ɡ |
 | `c8` | Forme V | j, ŋ |
 

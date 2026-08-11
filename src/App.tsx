@@ -3,6 +3,10 @@ import { AboutPage } from "@/components/AboutPage";
 import { AppShell, type AppPage } from "@/components/AppShell";
 import { BuyMeCoffeeWidget } from "@/components/BuyMeCoffeeWidget";
 import { CustomPhraseArena } from "@/components/CustomPhraseArena";
+import { DebugHandsArena } from "@/components/DebugHandsArena";
+import { DebugPositionsArena } from "@/components/DebugPositionsArena";
+import { DebugSyllablesArena } from "@/components/DebugSyllablesArena";
+import { DebugZonesArena } from "@/components/DebugZonesArena";
 import { FeedbackPage } from "@/components/FeedbackPage";
 import { FreePlayArena } from "@/components/FreePlayArena";
 import { HomeScreen } from "@/components/HomeScreen";
@@ -14,7 +18,13 @@ import { loadPack, savePack, type PackId } from "@/data/packs";
 import { loadProgress, type ProgressState } from "@/lib/progress";
 import { markFreeVisited } from "@/lib/visits";
 
-type Screen = "browse" | "practice";
+type Screen =
+  | "browse"
+  | "practice"
+  | "debug-zones"
+  | "debug-hands"
+  | "debug-positions"
+  | "debug-syllables";
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("browse");
@@ -48,12 +58,17 @@ export default function App() {
     setPage(next);
   };
 
-  const inPractice = screen === "practice";
+  const inCamera =
+    screen === "practice" ||
+    screen === "debug-zones" ||
+    screen === "debug-hands" ||
+    screen === "debug-positions" ||
+    screen === "debug-syllables";
 
   return (
     <>
       <AppShell
-        compact={inPractice}
+        compact={inCamera}
         activePage={page}
         onNavigate={browse}
         onHome={goHome}
@@ -69,7 +84,15 @@ export default function App() {
           </button>
         }
       >
-        {inPractice ? (
+        {screen === "debug-zones" ? (
+          <DebugZonesArena onExit={goHome} />
+        ) : screen === "debug-hands" ? (
+          <DebugHandsArena onExit={goHome} />
+        ) : screen === "debug-positions" ? (
+          <DebugPositionsArena onExit={goHome} />
+        ) : screen === "debug-syllables" ? (
+          <DebugSyllablesArena pack={pack} onExit={goHome} />
+        ) : screen === "practice" ? (
           track === "free" ? (
             <FreePlayArena onExit={goHome} />
           ) : track === "custom" ? (
@@ -106,11 +129,30 @@ export default function App() {
               setResumeIndex(at ?? 0);
               setScreen("practice");
             }}
+            onOpenDebugZones={
+              import.meta.env.DEV
+                ? () => setScreen("debug-zones")
+                : undefined
+            }
+            onOpenDebugHands={
+              import.meta.env.DEV
+                ? () => setScreen("debug-hands")
+                : undefined
+            }
+            onOpenDebugPositions={
+              import.meta.env.DEV
+                ? () => setScreen("debug-positions")
+                : undefined
+            }
+            onOpenDebugSyllables={
+              import.meta.env.DEV
+                ? () => setScreen("debug-syllables")
+                : undefined
+            }
           />
         )}
       </AppShell>
-      {/* Masqué en pratique caméra pour ne pas gêner les contrôles */}
-      <BuyMeCoffeeWidget enabled={!inPractice} />
+      <BuyMeCoffeeWidget enabled={!inCamera} />
     </>
   );
 }

@@ -1,6 +1,6 @@
 import type { HandshapeId, PositionId } from "@/data/lpc-fr";
 
-/** Photos générées (référentiel LfPC) — dos de la main visible */
+/** Photos pédagogiques LPC (schémas officiel c1–c8) */
 const HAND_PHOTOS: Record<HandshapeId, string> = {
   c1: `${import.meta.env.BASE_URL}examples/hands/c1.jpg`,
   c2: `${import.meta.env.BASE_URL}examples/hands/c2.jpg`,
@@ -25,7 +25,7 @@ function HandPhoto({ id }: { id: HandshapeId }) {
     <img
       src={HAND_PHOTOS[id]}
       alt={`Exemple de forme ${id}`}
-      className="h-full w-full object-cover"
+      className="h-full w-full object-fill"
       loading="eager"
       decoding="async"
     />

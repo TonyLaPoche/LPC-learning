@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import type { HandshapeId, PositionId } from "@/data/lpc-fr";
-import { classifyCuePosition, faceAnchors } from "@/lib/cuePosition";
+import {
+  classifyCuePosition,
+  faceAnchors,
+  type FaceAnchors,
+} from "@/lib/cuePosition";
 import {
   clearCanvas,
   drawFaceZones,
   drawHandSkeleton,
-  drawPointerMarker,
+  drawPointerMarkers,
 } from "@/lib/drawVision";
+import type { FingerState } from "@/lib/handGeometry";
 import { classifyHandshape } from "@/lib/handshape";
 import {
   isMobilePerfProfile,
@@ -66,6 +71,17 @@ export type LpcVisionReading = {
   matchHand: boolean;
   matchPosition: boolean;
   matchAll: boolean;
+  fingers: FingerState;
+  indexMiddleSpan: number;
+  handedness: string | null;
+};
+
+const EMPTY_FINGERS: FingerState = {
+  thumb: false,
+  index: false,
+  middle: false,
+  ring: false,
+  pinky: false,
 };
 
 /** Point de focus zoom (%, espace affiché après miroir horizontal). */
@@ -92,8 +108,17 @@ export function useLpcVision(opts: {
   cameraReady: boolean;
   target: Target;
   enabled: boolean;
+  /** Dessiner les rectangles de zone sur le canvas (défaut true). */
+  drawZones?: boolean;
 }) {
-  const { videoRef, canvasRef, cameraReady, target, enabled } = opts;
+  const {
+    videoRef,
+    canvasRef,
+    cameraReady,
+    target,
+    enabled,
+    drawZones = true,
+  } = opts;
   const [status, setStatus] = useState<VisionStatus>("idle");
   const [modelsReady, setModelsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,17 +130,25 @@ export function useLpcVision(opts: {
     matchHand: false,
     matchPosition: false,
     matchAll: false,
+    fingers: EMPTY_FINGERS,
+    indexMiddleSpan: 0,
+    handedness: null,
   });
   const [faceFocus, setFaceFocus] = useState<FaceFocus>(DEFAULT_FOCUS);
+  const [anchors, setAnchors] = useState<FaceAnchors | null>(null);
 
   const handRef = useRef<HandLandmarker | null>(null);
   const faceRef = useRef<FaceLandmarker | null>(null);
   const rafRef = useRef(0);
   const lastHandTs = useRef(0);
   const lastFaceTs = useRef(0);
+  const lastAnchorsUiTs = useRef(0);
   const handLmRef = useRef<NormalizedLandmark[] | null>(null);
+  const handednessRef = useRef<string | null>(null);
   const faceLmRef = useRef<NormalizedLandmark[] | null>(null);
   const targetRef = useRef(target);
+  const drawZonesRef = useRef(drawZones);
+  drawZonesRef.current = drawZones;
   const focusSmoothRef = useRef({ x: 50, y: 38 });
   const lastFocusUiTs = useRef(0);
   targetRef.current = target;
@@ -142,7 +175,7 @@ export function useLpcVision(opts: {
           delegate,
         },
         runningMode: "VIDEO",
-        numHands: 1,
+        numHands: 2,
         minHandDetectionConfidence: perf.handDetection,
         minHandPresenceConfidence: perf.handPresence,
         minTrackingConfidence: perf.handTracking,
@@ -268,9 +301,25 @@ export function useLpcVision(opts: {
         lastHandTs.current = now;
         try {
           const hr = hand.detectForVideo(video, now);
-          handLmRef.current = hr.landmarks?.[0] ?? null;
+          const hands = hr.landmarks ?? [];
+          const labels = hr.handednesses ?? [];
+          let pick = 0;
+          // Préfère la main droite (chirality MediaPipe sur flux non miroir)
+          for (let i = 0; i < labels.length; i++) {
+            const name = labels[i]?.[0]?.categoryName;
+            if (name === "Right") {
+              pick = i;
+              break;
+            }
+          }
+          handLmRef.current = hands[pick] ?? hands[0] ?? null;
+          handednessRef.current =
+            labels[pick]?.[0]?.categoryName ??
+            labels[0]?.[0]?.categoryName ??
+            null;
         } catch {
           handLmRef.current = null;
+          handednessRef.current = null;
         }
       }
 
@@ -313,18 +362,30 @@ export function useLpcVision(opts: {
         matchHand,
         matchPosition,
         matchAll,
+        fingers: shape.fingers,
+        indexMiddleSpan: shape.indexMiddleSpan,
+        handedness: handednessRef.current,
       };
 
       setReading((prev) => {
+        const sameFingers =
+          prev.fingers.thumb === nextReading.fingers.thumb &&
+          prev.fingers.index === nextReading.fingers.index &&
+          prev.fingers.middle === nextReading.fingers.middle &&
+          prev.fingers.ring === nextReading.fingers.ring &&
+          prev.fingers.pinky === nextReading.fingers.pinky;
         if (
           prev.handshape === nextReading.handshape &&
           prev.position === nextReading.position &&
           prev.matchHand === nextReading.matchHand &&
           prev.matchPosition === nextReading.matchPosition &&
           prev.matchAll === nextReading.matchAll &&
+          prev.handedness === nextReading.handedness &&
+          sameFingers &&
           Math.abs(prev.handConfidence - nextReading.handConfidence) < 0.05 &&
           Math.abs(prev.positionConfidence - nextReading.positionConfidence) <
-            0.05
+            0.05 &&
+          Math.abs(prev.indexMiddleSpan - nextReading.indexMiddleSpan) < 0.02
         ) {
           return prev;
         }
@@ -337,21 +398,23 @@ export function useLpcVision(opts: {
       const ctx = canvas.getContext("2d");
       if (ctx) {
         clearCanvas(ctx, cw, ch);
-        const anchors = faceAnchors(faceLm);
-        if (anchors) {
-          drawFaceZones(
-            ctx,
-            anchors,
-            cw,
-            ch,
-            t.position ?? pos.id,
-            perf.liteDraw,
-          );
+        const faceA = faceAnchors(faceLm);
+        if (faceA) {
+          if (drawZonesRef.current) {
+            drawFaceZones(
+              ctx,
+              faceA,
+              cw,
+              ch,
+              t.position ?? pos.id,
+              perf.liteDraw,
+            );
+          }
 
           // Focus zoom : nez un peu au-dessus du centre (meilleur cadrage)
           // Après miroir CSS scaleX(-1), x affiché = 1 - x MediaPipe
-          const rawX = (1 - anchors.nose.x) * 100;
-          const rawY = (anchors.nose.y * 0.55 + anchors.mouth.y * 0.45) * 100;
+          const rawX = (1 - faceA.nose.x) * 100;
+          const rawY = (faceA.nose.y * 0.55 + faceA.mouth.y * 0.45) * 100;
           const sm = focusSmoothRef.current;
           const alpha = 0.18;
           sm.x += (rawX - sm.x) * alpha;
@@ -375,14 +438,25 @@ export function useLpcVision(opts: {
               return nextFocus;
             });
           }
-        } else if (now - lastFocusUiTs.current > 200) {
-          lastFocusUiTs.current = now;
-          setFaceFocus((prev) => (prev.hasFace ? DEFAULT_FOCUS : prev));
+
+          if (now - lastAnchorsUiTs.current > 50) {
+            lastAnchorsUiTs.current = now;
+            setAnchors(faceA);
+          }
+        } else {
+          if (now - lastFocusUiTs.current > 200) {
+            lastFocusUiTs.current = now;
+            setFaceFocus((prev) => (prev.hasFace ? DEFAULT_FOCUS : prev));
+          }
+          if (now - lastAnchorsUiTs.current > 200) {
+            lastAnchorsUiTs.current = now;
+            setAnchors(null);
+          }
         }
         if (handLm) {
           drawHandSkeleton(ctx, handLm, cw, ch);
-          if (pos.pointer) {
-            drawPointerMarker(ctx, pos.pointer, cw, ch, matchAll);
+          if (pos.pointers.length > 0) {
+            drawPointerMarkers(ctx, pos.pointers, cw, ch, matchAll);
           }
         }
       }
@@ -397,5 +471,5 @@ export function useLpcVision(opts: {
     };
   }, [enabled, cameraReady, modelsReady, videoRef, canvasRef]);
 
-  return { status, error, reading, faceFocus };
+  return { status, error, reading, faceFocus, anchors };
 }
