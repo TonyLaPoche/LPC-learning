@@ -1,5 +1,7 @@
 /** Référentiel pédagogique LPC fr-FR (inspiré ALPC). */
 
+import { getZoneDisplayLabel } from "@/lib/zoneCalibration";
+
 export type HandshapeId =
   | "c1"
   | "c2"
@@ -317,7 +319,9 @@ export function handshapeById(id: HandshapeId): HandshapeDef {
 }
 
 export function positionById(id: PositionId): PositionDef {
-  return POSITIONS.find((p) => p.id === id)!;
+  const base = POSITIONS.find((p) => p.id === id)!;
+  const label = getZoneDisplayLabel(id, base.label);
+  return label === base.label ? base : { ...base, label };
 }
 
 export type LessonTrack =

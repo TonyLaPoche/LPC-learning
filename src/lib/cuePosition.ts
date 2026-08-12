@@ -5,7 +5,7 @@ import {
   dist,
   type Point,
 } from "@/lib/handGeometry";
-import { CALIBRATED_ZONE_REL, relToRect } from "@/lib/zoneCalibration";
+import { getActiveZoneRel, relToRect } from "@/lib/zoneCalibration";
 import type { NormalizedLandmark } from "@mediapipe/tasks-vision";
 
 /** Indices Face Mesh utiles (MediaPipe). */
@@ -76,15 +76,16 @@ function rectCenter(r: NormRect): Point {
 }
 
 /**
- * Zones LPC calibrées (un seul côté : droite écran / main dominante).
- * Offsets relatifs au nez — cf. CALIBRATED_ZONE_REL.
+ * Zones LPC actives (sauvegarde debug ou factory).
+ * Offsets relatifs au nez — cf. getActiveZoneRel().
  */
 export function buildZoneRects(
   anchors: FaceAnchors,
 ): Record<PositionId, NormRect[]> {
+  const active = getActiveZoneRel();
   const out = {} as Record<PositionId, NormRect[]>;
-  for (const id of Object.keys(CALIBRATED_ZONE_REL) as PositionId[]) {
-    out[id] = CALIBRATED_ZONE_REL[id].map((r) => relToRect(r, anchors));
+  for (const id of Object.keys(active) as PositionId[]) {
+    out[id] = active[id].map((r) => relToRect(r, anchors));
   }
   return out;
 }

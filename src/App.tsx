@@ -6,6 +6,7 @@ import { CustomPhraseArena } from "@/components/CustomPhraseArena";
 import { DebugHandsArena } from "@/components/DebugHandsArena";
 import { DebugPositionsArena } from "@/components/DebugPositionsArena";
 import { DebugSyllablesArena } from "@/components/DebugSyllablesArena";
+import { DebugZoneEditorArena } from "@/components/DebugZoneEditorArena";
 import { DebugZonesArena } from "@/components/DebugZonesArena";
 import { FeedbackPage } from "@/components/FeedbackPage";
 import { FreePlayArena } from "@/components/FreePlayArena";
@@ -18,10 +19,30 @@ import { loadPack, savePack, PACK_WIP, type PackId } from "@/data/packs";
 import { loadProgress, type ProgressState } from "@/lib/progress";
 import { markFreeVisited } from "@/lib/visits";
 
+const DEBUG_MENU_KEY = "cle-lpc-debug-menu-v1";
+
+function loadDebugMenu(): boolean {
+  try {
+    return sessionStorage.getItem(DEBUG_MENU_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function persistDebugMenu(on: boolean) {
+  try {
+    if (on) sessionStorage.setItem(DEBUG_MENU_KEY, "1");
+    else sessionStorage.removeItem(DEBUG_MENU_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 type Screen =
   | "browse"
   | "practice"
   | "debug-zones"
+  | "debug-zone-editor"
   | "debug-hands"
   | "debug-positions"
   | "debug-syllables";
@@ -35,6 +56,18 @@ export default function App() {
   const [progress, setProgress] = useState<ProgressState>(() =>
     loadProgress(loadPack()),
   );
+  /** Menu Debug (dev ouvert par défaut ; en prod via code clavier « debug »). */
+  const [debugMenu, setDebugMenu] = useState(
+    () => import.meta.env.DEV || loadDebugMenu(),
+  );
+
+  const toggleDebugMenu = useCallback(() => {
+    setDebugMenu((prev) => {
+      const next = !prev;
+      persistDebugMenu(next);
+      return next;
+    });
+  }, []);
 
   const refreshProgress = useCallback(() => {
     setProgress(loadProgress(pack));
@@ -62,6 +95,7 @@ export default function App() {
   const inCamera =
     screen === "practice" ||
     screen === "debug-zones" ||
+    screen === "debug-zone-editor" ||
     screen === "debug-hands" ||
     screen === "debug-positions" ||
     screen === "debug-syllables";
@@ -87,6 +121,8 @@ export default function App() {
       >
         {screen === "debug-zones" ? (
           <DebugZonesArena onExit={goHome} />
+        ) : screen === "debug-zone-editor" ? (
+          <DebugZoneEditorArena onExit={goHome} />
         ) : screen === "debug-hands" ? (
           <DebugHandsArena onExit={goHome} />
         ) : screen === "debug-positions" ? (
@@ -134,25 +170,22 @@ export default function App() {
               setResumeIndex(at ?? 0);
               setScreen("practice");
             }}
+            onToggleDebugMenu={toggleDebugMenu}
+            debugMenuOpen={debugMenu}
             onOpenDebugZones={
-              import.meta.env.DEV
-                ? () => setScreen("debug-zones")
-                : undefined
+              debugMenu ? () => setScreen("debug-zones") : undefined
+            }
+            onOpenDebugZoneEditor={
+              debugMenu ? () => setScreen("debug-zone-editor") : undefined
             }
             onOpenDebugHands={
-              import.meta.env.DEV
-                ? () => setScreen("debug-hands")
-                : undefined
+              debugMenu ? () => setScreen("debug-hands") : undefined
             }
             onOpenDebugPositions={
-              import.meta.env.DEV
-                ? () => setScreen("debug-positions")
-                : undefined
+              debugMenu ? () => setScreen("debug-positions") : undefined
             }
             onOpenDebugSyllables={
-              import.meta.env.DEV
-                ? () => setScreen("debug-syllables")
-                : undefined
+              debugMenu ? () => setScreen("debug-syllables") : undefined
             }
           />
         )}

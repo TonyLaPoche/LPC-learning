@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IntroBanner } from "@/components/IntroBanner";
 import { TRACKS, type LessonTrack } from "@/data/lpc-fr";
 import { PACKS, PACK_WIP, packById, type PackId } from "@/data/packs";
@@ -17,8 +17,12 @@ type HomeScreenProps = {
   pack: PackId;
   onPackChange: (pack: PackId) => void;
   onStart: (track: LessonTrack, resumeIndex?: number) => void;
-  /** Uniquement en mode développement. */
+  /** Tape « debug » sur l’accueil pour basculer le menu. */
+  onToggleDebugMenu?: () => void;
+  /** Menu debug visible (dev ou code clavier). */
+  debugMenuOpen?: boolean;
   onOpenDebugZones?: () => void;
+  onOpenDebugZoneEditor?: () => void;
   onOpenDebugHands?: () => void;
   onOpenDebugPositions?: () => void;
   onOpenDebugSyllables?: () => void;
@@ -48,13 +52,63 @@ export function HomeScreen({
   pack,
   onPackChange,
   onStart,
+  onToggleDebugMenu,
+  debugMenuOpen,
   onOpenDebugZones,
+  onOpenDebugZoneEditor,
   onOpenDebugHands,
   onOpenDebugPositions,
   onOpenDebugSyllables,
 }: HomeScreenProps) {
   const [showIntro, setShowIntro] = useState(() => !loadIntroSeen());
   const [enWipOpen, setEnWipOpen] = useState(false);
+  const [debugToast, setDebugToast] = useState<string | null>(null);
+  const bufferRef = useRef("");
+  const resetTimer = useRef(0);
+
+  useEffect(() => {
+    if (!onToggleDebugMenu) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = e.target as HTMLElement | null;
+      if (
+        el &&
+        (el.tagName === "INPUT" ||
+          el.tagName === "TEXTAREA" ||
+          el.tagName === "SELECT" ||
+          el.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key.length !== 1) return;
+      const ch = e.key.toLowerCase();
+      if (!/[a-z]/.test(ch)) {
+        bufferRef.current = "";
+        return;
+      }
+      bufferRef.current = (bufferRef.current + ch).slice(-5);
+      window.clearTimeout(resetTimer.current);
+      resetTimer.current = window.setTimeout(() => {
+        bufferRef.current = "";
+      }, 1600);
+      if (bufferRef.current === "debug") {
+        bufferRef.current = "";
+        onToggleDebugMenu();
+        setDebugToast(
+          debugMenuOpen ? "Debug masqué" : "Debug déverrouillé",
+        );
+        window.setTimeout(() => setDebugToast(null), 1800);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.clearTimeout(resetTimer.current);
+    };
+  }, [onToggleDebugMenu, debugMenuOpen]);
+
   const lessons = TRACKS.filter((t) => t.kind === "lesson" && !t.hidden);
   const reps = TRACKS.filter((t) => t.kind === "reps" && !t.hidden);
   const free = TRACKS.find((t) => t.kind === "free" && !t.hidden);
@@ -63,6 +117,14 @@ export function HomeScreen({
 
   return (
     <div className="space-y-6">
+      {debugToast && (
+        <div
+          className="fixed bottom-20 left-1/2 z-[10001] -translate-x-1/2 rounded-full border border-amber-400/50 bg-ink/95 px-4 py-2 text-sm font-semibold text-amber-100 shadow-lg"
+          role="status"
+        >
+          {debugToast}
+        </div>
+      )}
       <section className="relative overflow-hidden rounded-3xl border border-panel-2/60 bg-panel/70 p-6 sm:p-8">
         <div
           className="pointer-events-none absolute inset-0 opacity-40"
@@ -270,6 +332,7 @@ export function HomeScreen({
       )}
 
       {(onOpenDebugZones ||
+        onOpenDebugZoneEditor ||
         onOpenDebugHands ||
         onOpenDebugPositions ||
         onOpenDebugSyllables) && (
@@ -278,7 +341,12 @@ export function HomeScreen({
             Debug
           </h2>
           <p className="mb-3 text-sm text-mist">
-            Outils internes — visibles uniquement en développement.
+            Outils internes
+            {import.meta.env.DEV
+              ? " — visibles en développement."
+              : " — déverrouillés via le code clavier."}{" "}
+            Retape <kbd className="rounded bg-ink/60 px-1.5 py-0.5 text-amber-100">debug</kbd>{" "}
+            pour masquer.
           </p>
           <div className="space-y-3">
             {onOpenDebugZones && (
@@ -363,6 +431,28 @@ export function HomeScreen({
                   </h3>
                   <p className="mt-1 text-sm text-mist">
                     Forme + zone comme le parcours ; JSON si mismatch.
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-amber-300 px-3 py-1 text-xs font-semibold text-ink">
+                  Ouvrir
+                </span>
+              </button>
+            )}
+            {onOpenDebugZoneEditor && (
+              <button
+                type="button"
+                onClick={onOpenDebugZoneEditor}
+                className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-amber-400/45 bg-amber-400/10 p-5 text-left transition hover:border-amber-300/70 hover:bg-amber-400/15"
+              >
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-amber-200">
+                    Outil 5
+                  </p>
+                  <h3 className="mt-1 font-display text-xl font-bold">
+                    Éditeur zones + Save
+                  </h3>
+                  <p className="mt-1 text-sm text-mist">
+                    Placer, renommer les libellés, sauvegarder pour toute l’app.
                   </p>
                 </div>
                 <span className="shrink-0 rounded-full bg-amber-300 px-3 py-1 text-xs font-semibold text-ink">
