@@ -71,6 +71,10 @@ type CueExampleProps = {
   /** Texte à lire sur les lèvres (syllabe / mot). */
   lipsLabel?: string | null;
   compact?: boolean;
+  /** Miniatures pour listes / feedback (à côté des sélecteurs). */
+  size?: "sm" | "md" | "lg";
+  /** Masque les libellés Forme / Zone sous les vignettes. */
+  hideCaptions?: boolean;
 };
 
 export function CueExample({
@@ -78,56 +82,73 @@ export function CueExample({
   position,
   lipsLabel,
   compact,
+  size,
+  hideCaptions,
 }: CueExampleProps) {
   const showLips = Boolean(lipsLabel?.trim());
-  const box = compact
-    ? "h-[4.5rem] w-[4.5rem] sm:h-24 sm:w-24"
-    : "h-28 w-28";
+  const resolved =
+    size ?? (compact ? "md" : "lg");
+  const box =
+    resolved === "sm"
+      ? "h-11 w-11 rounded-lg sm:h-12 sm:w-12"
+      : resolved === "md"
+        ? "h-[4.5rem] w-[4.5rem] rounded-xl sm:h-24 sm:w-24"
+        : "h-28 w-28 rounded-xl";
+  const timesCls =
+    resolved === "sm" ? "text-sm text-teal" : "font-display text-lg text-teal";
+  const caption = hideCaptions || resolved === "sm" ? "sr-only" : "text-[10px] text-mist";
 
   return (
     <div
-      className="flex flex-wrap items-center justify-center gap-2"
+      className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2"
       aria-label="Exemple gestuel"
     >
       {handshape && (
         <div className="flex flex-col items-center gap-0.5">
           <div
-            className={`overflow-hidden rounded-xl border border-panel-2/70 bg-white shadow-sm ${box}`}
+            className={`overflow-hidden border border-panel-2/70 bg-white shadow-sm ${box}`}
           >
             <HandPhoto id={handshape} />
           </div>
-          <span className="text-[10px] text-mist">Forme</span>
+          <span className={caption}>Forme</span>
         </div>
       )}
       {handshape && position && (
-        <span className="font-display text-lg text-teal" aria-hidden>
+        <span className={timesCls} aria-hidden>
           ×
         </span>
       )}
       {position && (
         <div className="flex flex-col items-center gap-0.5">
           <div
-            className={`overflow-hidden rounded-xl border border-panel-2/70 bg-ink/50 ${box}`}
+            className={`overflow-hidden border border-panel-2/70 bg-ink/50 ${box}`}
           >
             <PositionPhoto id={position} />
           </div>
-          <span className="text-[10px] text-mist">Zone</span>
+          <span className={caption}>Zone</span>
         </div>
       )}
       {showLips && (
         <>
           {(handshape || position) && (
-            <span className="font-display text-lg text-sky" aria-hidden>
+            <span
+              className={
+                resolved === "sm"
+                  ? "text-sm text-sky"
+                  : "font-display text-lg text-sky"
+              }
+              aria-hidden
+            >
               ×
             </span>
           )}
           <div className="flex flex-col items-center gap-0.5">
             <div
-              className={`overflow-hidden rounded-xl border border-coral/40 bg-ink shadow-sm ${box}`}
+              className={`overflow-hidden border border-coral/40 bg-ink shadow-sm ${box}`}
             >
               <LipsCue label={lipsLabel!.trim()} />
             </div>
-            <span className="text-[10px] text-mist">Lèvres</span>
+            <span className={caption}>Lèvres</span>
           </div>
         </>
       )}
