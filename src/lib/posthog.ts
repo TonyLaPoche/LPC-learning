@@ -16,13 +16,21 @@ if (posthogClient && posthogKey && posthogHost) {
 
   posthogClient.init(posthogKey, {
     api_host: posthogHost,
+    defaults: "2026-05-30",
     // Pas de capture tant que l’utilisateur n’a pas consenti (RGPD).
     opt_out_capturing_by_default: true,
     persistence: "localStorage+cookie",
-    disable_session_recording: true,
-    capture_pageview: true,
+    // SPA : on pilote les pageviews via analytics.ts (+ history).
+    capture_pageview: false,
     capture_pageleave: true,
     person_profiles: "identified_only",
+    // Replay OFF jusqu’au consentement « replay ».
+    disable_session_recording: true,
+    session_recording: {
+      maskAllInputs: true,
+      // Caméra / landmarks : jamais dans le replay.
+      blockSelector: "video, canvas",
+    },
     capture_exceptions: {
       capture_unhandled_errors: true,
       capture_unhandled_rejections: true,
@@ -50,6 +58,7 @@ export function applyConsentToPostHog(prefs: ConsentPreferences): void {
   if (prefs.analytics) {
     posthogClient.opt_in_capturing();
     if (prefs.replay) {
+      // Ne démarre le replay que si explicitement accepté.
       posthogClient.startSessionRecording();
     } else {
       posthogClient.stopSessionRecording();
@@ -58,6 +67,12 @@ export function applyConsentToPostHog(prefs: ConsentPreferences): void {
     posthogClient.stopSessionRecording();
     posthogClient.opt_out_capturing();
   }
+}
+
+/** Replay actif uniquement si analytics + replay consentis. */
+export function isSessionReplayAllowed(): boolean {
+  const c = loadConsent();
+  return c.decided && c.analytics && c.replay;
 }
 
 export default posthogClient;

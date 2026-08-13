@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AboutPage } from "@/components/AboutPage";
 import { AppShell, type AppPage } from "@/components/AppShell";
 import { BuyMeCoffeeWidget } from "@/components/BuyMeCoffeeWidget";
@@ -18,42 +18,70 @@ import { ProfilePage } from "@/components/ProfilePage";
 import { SupportPage } from "@/components/SupportPage";
 import type { LessonTrack } from "@/data/lpc-fr";
 import { loadPack, savePack, PACK_WIP, type PackId } from "@/data/packs";
+import {
+  registerAnalyticsContext,
+  trackScreenView,
+  type AppScreen,
+} from "@/lib/analytics";
 import { loadProgress, type ProgressState } from "@/lib/progress";
 import posthog from "@/lib/posthog";
 import { markFreeVisited } from "@/lib/visits";
 
 const LEGAL_PAGES = new Set<AppPage>(["privacy", "terms", "cookies"]);
 
-function pageFromUrl(): AppPage | null {
+const BROWSE_PAGES = new Set<AppPage>([
+  "home",
+  "about",
+  "support",
+  "profile",
+  "feedback",
+  "privacy",
+  "terms",
+  "cookies",
+]);
+
+const SCREENS = new Set<AppScreen>([
+  "browse",
+  "practice",
+  "debug-zones",
+  "debug-zone-editor",
+  "debug-hands",
+  "debug-positions",
+  "debug-syllables",
+]);
+
+function readInitialRoute(): {
+  screen: AppScreen;
+  page: AppPage;
+  track?: LessonTrack;
+} {
   try {
-    const p = new URLSearchParams(window.location.search).get("page");
-    if (
-      p === "privacy" ||
-      p === "terms" ||
-      p === "cookies" ||
-      p === "about" ||
-      p === "support" ||
-      p === "profile" ||
-      p === "feedback" ||
-      p === "home"
-    ) {
-      return p;
+    const params = new URLSearchParams(window.location.search);
+    const screenParam = params.get("screen");
+    const pageParam = params.get("page");
+    const trackParam = params.get("track");
+
+    if (screenParam && SCREENS.has(screenParam as AppScreen)) {
+      const screen = screenParam as AppScreen;
+      if (screen === "practice") {
+        return {
+          screen,
+          page: "home",
+          track: (trackParam as LessonTrack) || "shapes",
+        };
+      }
+      if (screen !== "browse") {
+        return { screen, page: "home" };
+      }
+    }
+
+    if (pageParam && BROWSE_PAGES.has(pageParam as AppPage)) {
+      return { screen: "browse", page: pageParam as AppPage };
     }
   } catch {
     /* ignore */
   }
-  return null;
-}
-
-function syncPageToUrl(page: AppPage) {
-  try {
-    const url = new URL(window.location.href);
-    if (page === "home") url.searchParams.delete("page");
-    else url.searchParams.set("page", page);
-    window.history.replaceState({}, "", url);
-  } catch {
-    /* ignore */
-  }
+  return { screen: "browse", page: "home" };
 }
 
 const DEBUG_MENU_KEY = "cle-lpc-debug-menu-v1";
@@ -75,19 +103,11 @@ function persistDebugMenu(on: boolean) {
   }
 }
 
-type Screen =
-  | "browse"
-  | "practice"
-  | "debug-zones"
-  | "debug-zone-editor"
-  | "debug-hands"
-  | "debug-positions"
-  | "debug-syllables";
-
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("browse");
-  const [page, setPage] = useState<AppPage>(() => pageFromUrl() ?? "home");
-  const [track, setTrack] = useState<LessonTrack>("shapes");
+  const initial = readInitialRoute();
+  const [screen, setScreen] = useState<AppScreen>(initial.screen);
+  const [page, setPage] = useState<AppPage>(initial.page);
+  const [track, setTrack] = useState<LessonTrack>(initial.track ?? "shapes");
   const [resumeIndex, setResumeIndex] = useState(0);
   const [pack, setPack] = useState<PackId>(() => loadPack());
   const [progress, setProgress] = useState<ProgressState>(() =>
@@ -98,10 +118,22 @@ export default function App() {
   const [debugMenu, setDebugMenu] = useState(
     () => import.meta.env.DEV || loadDebugMenu(),
   );
+  const lastTracked = useRef<string>("");
+
+  const trackCurrentScreen = useCallback(() => {
+    const key = `${screen}|${page}|${track}|${pack}`;
+    if (lastTracked.current === key) return;
+    lastTracked.current = key;
+    trackScreenView({ screen, page, track, pack });
+  }, [screen, page, track, pack]);
 
   useEffect(() => {
-    syncPageToUrl(page);
-  }, [page]);
+    registerAnalyticsContext(pack);
+  }, [pack]);
+
+  useEffect(() => {
+    trackCurrentScreen();
+  }, [trackCurrentScreen]);
 
   const toggleDebugMenu = useCallback(() => {
     setDebugMenu((prev) => {
@@ -118,7 +150,7 @@ export default function App() {
   const changePack = (next: PackId) => {
     if (PACK_WIP[next] || next === pack) return;
     savePack(next);
-    posthog?.capture("learning_pack_selected", { pack: next });
+    posthog?.capture("learning_pack_selected", { pack: next, from_pack: pack });
     setPack(next);
     setProgress(loadProgress(next));
   };
@@ -252,6 +284,11 @@ export default function App() {
           onNavigateCookies={() => {
             setCookieSettingsOpen(false);
             browse("cookies");
+          }}
+          onConsentApplied={() => {
+            // Force un re-track après opt-in (events étaient bloqués avant).
+            lastTracked.current = "";
+            trackCurrentScreen();
           }}
         />
       )}

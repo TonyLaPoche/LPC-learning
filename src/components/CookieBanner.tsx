@@ -13,12 +13,15 @@ type CookieBannerProps = {
   forceOpen?: boolean;
   onCloseSettings?: () => void;
   onNavigateCookies?: () => void;
+  /** Après accept / refus / personnalisation (pour rejouer le screen_view) */
+  onConsentApplied?: () => void;
 };
 
 export function CookieBanner({
   forceOpen = false,
   onCloseSettings,
   onNavigateCookies,
+  onConsentApplied,
 }: CookieBannerProps) {
   const [consent, setConsent] = useState<ConsentState>(() => loadConsent());
   const [customize, setCustomize] = useState(false);
@@ -35,6 +38,7 @@ export function CookieBanner({
     applyConsentToPostHog(next);
     setCustomize(false);
     onCloseSettings?.();
+    onConsentApplied?.();
   };
 
   return (
