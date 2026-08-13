@@ -36,8 +36,8 @@ export function AboutPage() {
           <li>Parcours guidés : formes → positions → syllabes → mots → phrases</li>
           <li>Mode répétitions : 3× guidé, puis rappel sans guide</li>
           <li>
-            Caméra + MediaPipe (mains & visage) — rien n’est envoyé sur un
-            serveur
+            Caméra + MediaPipe (mains & visage) — traitement local dans le
+            navigateur
           </li>
           <li>Progression et zoom en localStorage</li>
         </ul>
@@ -92,8 +92,12 @@ export function AboutPage() {
       <section className="space-y-2 rounded-2xl border border-panel-2/70 bg-panel/60 p-4">
         <h2 className="font-display text-lg font-bold">Confidentialité</h2>
         <p className="text-sm text-mist">
-          Aucun compte, aucun upload. Le flux caméra et les scores restent sur
-          ton appareil.
+          Aucun compte, aucun upload de vidéo. Le flux caméra et ta progression
+          restent sur ton appareil. Avec ton accord, PostHog (UE) mesure
+          l’usage de l’app (analytics / replay optionnel) — jamais la caméra.
+        </p>
+        <p className="text-sm text-mist">
+          Détails : liens Confidentialité, CGU et Cookies en bas de page.
         </p>
       </section>
     </div>

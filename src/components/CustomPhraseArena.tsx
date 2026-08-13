@@ -3,6 +3,7 @@ import { PracticeArena } from "@/components/PracticeArena";
 import { packHandshape, packPosition, type PackId } from "@/data/packs";
 import { textToCuesForPack } from "@/lib/textToCues";
 import { markCompleted } from "@/lib/progress";
+import posthog from "@/lib/posthog";
 import { markCustomVisited } from "@/lib/visits";
 
 type CustomPhraseArenaProps = {
@@ -61,6 +62,10 @@ export function CustomPhraseArena({
     if (!canStart) return;
     markCustomVisited();
     markCompleted("custom-compose", 10, pack);
+    posthog?.capture("custom_phrase_session_started", {
+      pack,
+      cue_count: preview.keys.length,
+    });
     onProgress();
     setSession({
       label: preview.words.join(" ") || draft.trim(),

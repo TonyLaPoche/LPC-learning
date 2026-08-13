@@ -1,6 +1,14 @@
 import type { ReactNode } from "react";
 
-export type AppPage = "home" | "about" | "support" | "profile" | "feedback";
+export type AppPage =
+  | "home"
+  | "about"
+  | "support"
+  | "profile"
+  | "feedback"
+  | "privacy"
+  | "terms"
+  | "cookies";
 
 type AppShellProps = {
   children: ReactNode;
@@ -10,6 +18,7 @@ type AppShellProps = {
   activePage?: AppPage;
   onNavigate?: (page: AppPage) => void;
   onHome?: () => void;
+  onOpenCookieSettings?: () => void;
 };
 
 export function AppShell({
@@ -19,6 +28,7 @@ export function AppShell({
   activePage = "home",
   onNavigate,
   onHome,
+  onOpenCookieSettings,
 }: AppShellProps) {
   if (compact) {
     return (
@@ -93,14 +103,77 @@ export function AppShell({
 
       <main>{children}</main>
 
-      <p className="mt-10 pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-[10px] text-mist/60">
-        Financé par les{" "}
-        <span className="relative inline-block">
-          <span className="line-through decoration-mist/70">dons</span>
-        </span>{" "}
-        café — sans pub tant qu’il reste du café
-      </p>
+      <footer className="mt-10 space-y-3 border-t border-panel-2/40 pt-6 pb-[max(1rem,env(safe-area-inset-bottom))] text-center">
+        {onNavigate && (
+          <nav
+            className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] text-mist/80"
+            aria-label="Mentions légales"
+          >
+            <FooterLink
+              label="Confidentialité"
+              active={activePage === "privacy"}
+              onClick={() => onNavigate("privacy")}
+            />
+            <span aria-hidden className="text-mist/30">
+              ·
+            </span>
+            <FooterLink
+              label="CGU"
+              active={activePage === "terms"}
+              onClick={() => onNavigate("terms")}
+            />
+            <span aria-hidden className="text-mist/30">
+              ·
+            </span>
+            <FooterLink
+              label="Cookies"
+              active={activePage === "cookies"}
+              onClick={() => onNavigate("cookies")}
+            />
+            {onOpenCookieSettings && (
+              <>
+                <span aria-hidden className="text-mist/30">
+                  ·
+                </span>
+                <FooterLink
+                  label="Gérer les cookies"
+                  onClick={onOpenCookieSettings}
+                />
+              </>
+            )}
+          </nav>
+        )}
+        <p className="text-[10px] text-mist/60">
+          Financé par les{" "}
+          <span className="relative inline-block">
+            <span className="line-through decoration-mist/70">dons</span>
+          </span>{" "}
+          café — sans pub tant qu’il reste du café
+        </p>
+      </footer>
     </div>
+  );
+}
+
+function FooterLink({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`transition hover:text-teal ${
+        active ? "font-semibold text-teal" : ""
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 

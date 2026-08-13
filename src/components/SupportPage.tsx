@@ -1,3 +1,4 @@
+import posthog from "@/lib/posthog";
 import { BUY_ME_A_COFFEE_URL, SUPPORT_COPY } from "@/lib/support";
 
 export function SupportPage() {
@@ -33,6 +34,11 @@ export function SupportPage() {
         {BUY_ME_A_COFFEE_URL ? (
           <a
             href={BUY_ME_A_COFFEE_URL}
+            onClick={() =>
+              posthog?.capture("support_link_clicked", {
+                source: "support_page",
+              })
+            }
             target="_blank"
             rel="noreferrer"
             className="mt-4 inline-flex rounded-full bg-[#FFDD00] px-5 py-2.5 text-sm font-bold text-[#1a1a1a] shadow-sm transition hover:brightness-105"

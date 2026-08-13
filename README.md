@@ -12,7 +12,9 @@ Tu t’entraînes devant ta webcam. Le navigateur suit **main** et **visage** (M
 
 - Flux caméra traité **uniquement dans le navigateur**
 - Progression en **localStorage**
-- Pas de backend dans le MVP
+- Pas de backend applicatif dans le MVP
+- Mesure d’audience optionnelle via **PostHog (UE)** — consentement cookies / RGPD
+- Pages : Confidentialité, CGU, Cookies (`?page=privacy|terms|cookies`)
 
 ## Lancer en local
 

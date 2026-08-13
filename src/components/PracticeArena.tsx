@@ -27,6 +27,7 @@ import {
   FACE_ZOOM_MAX,
 } from "@/lib/progress";
 import type { CueToken } from "@/lib/lpcPhonemes";
+import posthog from "@/lib/posthog";
 import {
   clearTrackCursor,
   saveTrackCursor,
@@ -505,6 +506,12 @@ export function PracticeArena({
         const completeXp = isBonus ? 25 : 15;
         markCompleted(stepIdRef.current, completeXp, packRef.current);
         addXp(baseXp, packRef.current);
+        posthog?.capture("learning_step_completed", {
+          track: trackRef.current,
+          pack: packRef.current,
+          step_type: isBonus ? "bonus" : "standard",
+          is_custom_session: Boolean(customSession),
+        });
         onProgressRef.current();
 
         const gate = afterWordRef.current;
@@ -521,6 +528,12 @@ export function PracticeArena({
             if (!customSession) {
               clearTrackCursor(packRef.current, trackRef.current);
             }
+            posthog?.capture("learning_session_completed", {
+              track: trackRef.current,
+              pack: packRef.current,
+              is_custom_session: Boolean(customSession),
+              step_count: stepsLenRef.current,
+            });
             setSessionDone(true);
             return;
           }
@@ -570,6 +583,12 @@ export function PracticeArena({
     setWordPause(null);
     if (isLast) {
       if (!customSession) clearTrackCursor(pack, track);
+      posthog?.capture("learning_session_completed", {
+        track,
+        pack,
+        is_custom_session: Boolean(customSession),
+        step_count: steps.length,
+      });
       setSessionDone(true);
       return;
     }

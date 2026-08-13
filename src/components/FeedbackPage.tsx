@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { HANDSHAPES, POSITIONS } from "@/data/lpc-fr";
 import type { PackId } from "@/data/packs";
+import posthog from "@/lib/posthog";
 import {
   FEEDBACK_EMAIL,
   buildFeedbackPayload,
@@ -87,6 +88,10 @@ export function FeedbackPage({ pack }: FeedbackPageProps) {
       corrections: usable.length > 0 ? usable : items,
     });
     const filename = downloadFeedbackJson(payload);
+    posthog?.capture("feedback_submitted", {
+      pack,
+      correction_count: usable.length,
+    });
     openFeedbackMailto(payload, filename);
     setStatus(
       `Fichier « ${filename} » téléchargé. Ton client mail s’ouvre pour ${FEEDBACK_EMAIL} — pense à joindre le JSON si besoin.`,

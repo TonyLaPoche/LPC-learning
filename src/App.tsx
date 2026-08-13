@@ -1,7 +1,8 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AboutPage } from "@/components/AboutPage";
 import { AppShell, type AppPage } from "@/components/AppShell";
 import { BuyMeCoffeeWidget } from "@/components/BuyMeCoffeeWidget";
+import { CookieBanner } from "@/components/CookieBanner";
 import { CustomPhraseArena } from "@/components/CustomPhraseArena";
 import { DebugHandsArena } from "@/components/DebugHandsArena";
 import { DebugPositionsArena } from "@/components/DebugPositionsArena";
@@ -11,13 +12,49 @@ import { DebugZonesArena } from "@/components/DebugZonesArena";
 import { FeedbackPage } from "@/components/FeedbackPage";
 import { FreePlayArena } from "@/components/FreePlayArena";
 import { HomeScreen } from "@/components/HomeScreen";
+import { LegalPage, type LegalDoc } from "@/components/LegalPage";
 import { PracticeArena } from "@/components/PracticeArena";
 import { ProfilePage } from "@/components/ProfilePage";
 import { SupportPage } from "@/components/SupportPage";
 import type { LessonTrack } from "@/data/lpc-fr";
 import { loadPack, savePack, PACK_WIP, type PackId } from "@/data/packs";
 import { loadProgress, type ProgressState } from "@/lib/progress";
+import posthog from "@/lib/posthog";
 import { markFreeVisited } from "@/lib/visits";
+
+const LEGAL_PAGES = new Set<AppPage>(["privacy", "terms", "cookies"]);
+
+function pageFromUrl(): AppPage | null {
+  try {
+    const p = new URLSearchParams(window.location.search).get("page");
+    if (
+      p === "privacy" ||
+      p === "terms" ||
+      p === "cookies" ||
+      p === "about" ||
+      p === "support" ||
+      p === "profile" ||
+      p === "feedback" ||
+      p === "home"
+    ) {
+      return p;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function syncPageToUrl(page: AppPage) {
+  try {
+    const url = new URL(window.location.href);
+    if (page === "home") url.searchParams.delete("page");
+    else url.searchParams.set("page", page);
+    window.history.replaceState({}, "", url);
+  } catch {
+    /* ignore */
+  }
+}
 
 const DEBUG_MENU_KEY = "cle-lpc-debug-menu-v1";
 
@@ -49,17 +86,22 @@ type Screen =
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("browse");
-  const [page, setPage] = useState<AppPage>("home");
+  const [page, setPage] = useState<AppPage>(() => pageFromUrl() ?? "home");
   const [track, setTrack] = useState<LessonTrack>("shapes");
   const [resumeIndex, setResumeIndex] = useState(0);
   const [pack, setPack] = useState<PackId>(() => loadPack());
   const [progress, setProgress] = useState<ProgressState>(() =>
     loadProgress(loadPack()),
   );
+  const [cookieSettingsOpen, setCookieSettingsOpen] = useState(false);
   /** Menu Debug (dev ouvert par défaut ; en prod via code clavier « debug »). */
   const [debugMenu, setDebugMenu] = useState(
     () => import.meta.env.DEV || loadDebugMenu(),
   );
+
+  useEffect(() => {
+    syncPageToUrl(page);
+  }, [page]);
 
   const toggleDebugMenu = useCallback(() => {
     setDebugMenu((prev) => {
@@ -76,6 +118,7 @@ export default function App() {
   const changePack = (next: PackId) => {
     if (PACK_WIP[next] || next === pack) return;
     savePack(next);
+    posthog?.capture("learning_pack_selected", { pack: next });
     setPack(next);
     setProgress(loadProgress(next));
   };
@@ -107,6 +150,7 @@ export default function App() {
         activePage={page}
         onNavigate={browse}
         onHome={goHome}
+        onOpenCookieSettings={() => setCookieSettingsOpen(true)}
         headerRight={
           <button
             type="button"
@@ -147,6 +191,12 @@ export default function App() {
               onProgress={refreshProgress}
             />
           )
+        ) : LEGAL_PAGES.has(page) ? (
+          <LegalPage
+            doc={page as LegalDoc}
+            onOpenCookiesSettings={() => setCookieSettingsOpen(true)}
+            onNavigate={(doc) => browse(doc)}
+          />
         ) : page === "about" ? (
           <AboutPage />
         ) : page === "feedback" ? (
@@ -166,6 +216,11 @@ export default function App() {
             onPackChange={changePack}
             onStart={(t, at) => {
               if (t === "free") markFreeVisited();
+              posthog?.capture("learning_session_started", {
+                track: t,
+                pack,
+                resumed: at != null && at > 0,
+              });
               setTrack(t);
               setResumeIndex(at ?? 0);
               setScreen("practice");
@@ -190,6 +245,16 @@ export default function App() {
           />
         )}
       </AppShell>
+      {!inCamera && (
+        <CookieBanner
+          forceOpen={cookieSettingsOpen}
+          onCloseSettings={() => setCookieSettingsOpen(false)}
+          onNavigateCookies={() => {
+            setCookieSettingsOpen(false);
+            browse("cookies");
+          }}
+        />
+      )}
       <BuyMeCoffeeWidget enabled={!inCamera} />
     </>
   );

@@ -6,6 +6,7 @@ import {
 } from "@/lib/achievements";
 import { packById, type PackId } from "@/data/packs";
 import { loadProgress, resetAllProgress, type ProgressState } from "@/lib/progress";
+import posthog from "@/lib/posthog";
 import { clearAllTrackCursors } from "@/lib/trackProgress";
 import {
   clearVisitFlags,
@@ -44,6 +45,7 @@ export function ProfilePage({
     : "—";
 
   const doReset = () => {
+    posthog?.capture("progress_reset", { pack });
     resetAllProgress();
     clearAllTrackCursors();
     clearVisitFlags();

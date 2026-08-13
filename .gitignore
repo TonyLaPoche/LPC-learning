@@ -17,5 +17,9 @@ dist-ssr
 .env.*
 !.env.example
 
+# PostHog wizard / agent caches
+.posthog-wizard-cache/
+.claude/
+
 # Docs privés (RDV asso, propositions CHF, PDF) — ne pas pousser
 /docs/
