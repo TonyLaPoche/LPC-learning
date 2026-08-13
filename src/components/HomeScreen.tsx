@@ -3,6 +3,7 @@ import { IntroBanner } from "@/components/IntroBanner";
 import { TRACKS, type LessonTrack } from "@/data/lpc-fr";
 import { PACKS, PACK_WIP, packById, type PackId } from "@/data/packs";
 import type { ProgressState } from "@/lib/progress";
+import posthog from "@/lib/posthog";
 import { BUY_ME_A_COFFEE_URL, SUPPORT_COPY } from "@/lib/support";
 import {
   getTrackStats,
@@ -268,6 +269,11 @@ export function HomeScreen({
               <div className="flex flex-wrap gap-2 pt-1">
                 <a
                   href={BUY_ME_A_COFFEE_URL}
+                  onClick={() =>
+                    posthog?.capture("support_link_clicked", {
+                      source: "home_en_wip",
+                    })
+                  }
                   target="_blank"
                   rel="noreferrer"
                   className="rounded-full bg-[#5F7FFF] px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
