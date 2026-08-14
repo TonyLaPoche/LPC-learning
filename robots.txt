@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://tonylapoche.github.io/LPC-learning/sitemap.xml
