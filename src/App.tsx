@@ -7,6 +7,7 @@ import { CustomPhraseArena } from "@/components/CustomPhraseArena";
 import { DebugHandsArena } from "@/components/DebugHandsArena";
 import { DebugPositionsArena } from "@/components/DebugPositionsArena";
 import { DebugSyllablesArena } from "@/components/DebugSyllablesArena";
+import { DebugVoiceArena } from "@/components/DebugVoiceArena";
 import { DebugZoneEditorArena } from "@/components/DebugZoneEditorArena";
 import { DebugZonesArena } from "@/components/DebugZonesArena";
 import { FeedbackPage } from "@/components/FeedbackPage";
@@ -15,6 +16,7 @@ import { HomeScreen } from "@/components/HomeScreen";
 import { LegalPage, type LegalDoc } from "@/components/LegalPage";
 import { PracticeArena } from "@/components/PracticeArena";
 import { ProfilePage } from "@/components/ProfilePage";
+import { SettingsPage } from "@/components/SettingsPage";
 import { SupportPage } from "@/components/SupportPage";
 import type { LessonTrack } from "@/data/lpc-fr";
 import { loadPack, savePack, PACK_WIP, type PackId } from "@/data/packs";
@@ -38,6 +40,7 @@ const BROWSE_PAGES = new Set<AppPage>([
   "privacy",
   "terms",
   "cookies",
+  "settings",
 ]);
 
 const SCREENS = new Set<AppScreen>([
@@ -48,6 +51,7 @@ const SCREENS = new Set<AppScreen>([
   "debug-hands",
   "debug-positions",
   "debug-syllables",
+  "debug-voice",
 ]);
 
 function readInitialRoute(): {
@@ -173,7 +177,8 @@ export default function App() {
     screen === "debug-zone-editor" ||
     screen === "debug-hands" ||
     screen === "debug-positions" ||
-    screen === "debug-syllables";
+    screen === "debug-syllables" ||
+    screen === "debug-voice";
 
   return (
     <>
@@ -205,6 +210,8 @@ export default function App() {
           <DebugPositionsArena onExit={goHome} />
         ) : screen === "debug-syllables" ? (
           <DebugSyllablesArena pack={pack} onExit={goHome} />
+        ) : screen === "debug-voice" ? (
+          <DebugVoiceArena pack={pack} onExit={goHome} />
         ) : screen === "practice" ? (
           track === "free" ? (
             <FreePlayArena onExit={goHome} />
@@ -241,11 +248,18 @@ export default function App() {
             pack={pack}
             onProgressChange={setProgress}
           />
+        ) : page === "settings" ? (
+          <SettingsPage
+            onOpenZonePlacement={() => setScreen("debug-zones")}
+            onOpenZoneEditor={() => setScreen("debug-zone-editor")}
+            onOpenCookieSettings={() => setCookieSettingsOpen(true)}
+          />
         ) : (
           <HomeScreen
             progress={progress}
             pack={pack}
             onPackChange={changePack}
+            onOpenSettings={() => browse("settings")}
             onStart={(t, at) => {
               if (t === "free") markFreeVisited();
               posthog?.capture("learning_session_started", {
@@ -273,6 +287,9 @@ export default function App() {
             }
             onOpenDebugSyllables={
               debugMenu ? () => setScreen("debug-syllables") : undefined
+            }
+            onOpenDebugVoice={
+              debugMenu ? () => setScreen("debug-voice") : undefined
             }
           />
         )}

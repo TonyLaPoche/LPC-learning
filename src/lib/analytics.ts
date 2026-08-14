@@ -16,7 +16,8 @@ export type AppScreen =
   | "debug-zone-editor"
   | "debug-hands"
   | "debug-positions"
-  | "debug-syllables";
+  | "debug-syllables"
+  | "debug-voice";
 
 export type ScreenContext = {
   screen: AppScreen;

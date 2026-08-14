@@ -8,7 +8,8 @@ export type AppPage =
   | "feedback"
   | "privacy"
   | "terms"
-  | "cookies";
+  | "cookies"
+  | "settings";
 
 type AppShellProps = {
   children: ReactNode;
@@ -77,6 +78,11 @@ export function AppShell({
             label="Accueil"
             active={activePage === "home"}
             onClick={() => onNavigate("home")}
+          />
+          <NavLink
+            label="Réglages"
+            active={activePage === "settings"}
+            onClick={() => onNavigate("settings")}
           />
           <NavLink
             label="Profil"

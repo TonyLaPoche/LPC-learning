@@ -24,6 +24,7 @@ type HomeScreenProps = {
   pack: PackId;
   onPackChange: (pack: PackId) => void;
   onStart: (track: LessonTrack, resumeIndex?: number) => void;
+  onOpenSettings?: () => void;
   /** Tape « debug » sur l’accueil pour basculer le menu. */
   onToggleDebugMenu?: () => void;
   /** Menu debug visible (dev ou code clavier). */
@@ -33,6 +34,7 @@ type HomeScreenProps = {
   onOpenDebugHands?: () => void;
   onOpenDebugPositions?: () => void;
   onOpenDebugSyllables?: () => void;
+  onOpenDebugVoice?: () => void;
 };
 
 function statusBadge(stats: TrackStats): { label: string; className: string } {
@@ -59,6 +61,7 @@ export function HomeScreen({
   pack,
   onPackChange,
   onStart,
+  onOpenSettings,
   onToggleDebugMenu,
   debugMenuOpen,
   onOpenDebugZones,
@@ -66,6 +69,7 @@ export function HomeScreen({
   onOpenDebugHands,
   onOpenDebugPositions,
   onOpenDebugSyllables,
+  onOpenDebugVoice,
 }: HomeScreenProps) {
   const [showIntro, setShowIntro] = useState(() => !loadIntroSeen());
   const [enWipOpen, setEnWipOpen] = useState(false);
@@ -132,10 +136,59 @@ export function HomeScreen({
   }, [onToggleDebugMenu, debugMenuOpen]);
 
   const lessons = TRACKS.filter((t) => t.kind === "lesson" && !t.hidden);
+  const initiation = lessons.filter(
+    (t) => t.id === "shapes" || t.id === "positions" || t.id === "syllables",
+  );
+  const firstPractice = lessons.filter(
+    (t) => t.id === "words" || t.id === "phrases",
+  );
   const reps = TRACKS.filter((t) => t.kind === "reps" && !t.hidden);
   const free = TRACKS.find((t) => t.kind === "free" && !t.hidden);
   const custom = TRACKS.find((t) => t.kind === "custom" && !t.hidden);
   const meta = packById(pack);
+
+  const renderLessonCard = (t: (typeof lessons)[number]) => {
+    const stats = getTrackStats(t.id as PracticeTrack, pack, progress);
+    const badge = statusBadge(stats);
+    const pct =
+      stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
+    return (
+      <button
+        key={t.id}
+        type="button"
+        onClick={() =>
+          requestStart(
+            t.id,
+            stats.status === "done" ? 0 : stats.resumeIndex,
+          )
+        }
+        className="group rounded-2xl border border-panel-2/70 bg-panel/60 p-5 text-left transition hover:border-teal/50 hover:bg-panel"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wider text-sky">
+              Étape {t.badge}
+            </p>
+            <h3 className="mt-1 font-display text-xl font-bold">{t.title}</h3>
+            <p className="mt-1 text-sm text-mist">{t.subtitle}</p>
+            {stats.total > 0 && (
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink/70">
+                <div
+                  className="h-full rounded-full bg-teal/80"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            )}
+          </div>
+          <span
+            className={`shrink-0 rounded-full px-3 py-1 text-xs ${badge.className}`}
+          >
+            {badge.label}
+          </span>
+        </div>
+      </button>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -362,7 +415,8 @@ export function HomeScreen({
         onOpenDebugZoneEditor ||
         onOpenDebugHands ||
         onOpenDebugPositions ||
-        onOpenDebugSyllables) && (
+        onOpenDebugSyllables ||
+        onOpenDebugVoice) && (
         <section>
           <h2 className="mb-2 font-display text-lg font-bold text-amber-200">
             Debug
@@ -465,6 +519,28 @@ export function HomeScreen({
                 </span>
               </button>
             )}
+            {onOpenDebugVoice && (
+              <button
+                type="button"
+                onClick={onOpenDebugVoice}
+                className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-amber-400/45 bg-amber-400/10 p-5 text-left transition hover:border-amber-300/70 hover:bg-amber-400/15"
+              >
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-amber-200">
+                    Outil 5
+                  </p>
+                  <h3 className="mt-1 font-display text-xl font-bold">
+                    Voice gate (clé + zone + micro)
+                  </h3>
+                  <p className="mt-1 text-sm text-mist">
+                    Preview VAD local : valide si forme, zone et voix OK.
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-amber-300 px-3 py-1 text-xs font-semibold text-ink">
+                  Ouvrir
+                </span>
+              </button>
+            )}
             {onOpenDebugZoneEditor && (
               <button
                 type="button"
@@ -473,7 +549,7 @@ export function HomeScreen({
               >
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-amber-200">
-                    Outil 5
+                    Outil 6
                   </p>
                   <h3 className="mt-1 font-display text-xl font-bold">
                     Éditeur zones + Save
@@ -491,6 +567,31 @@ export function HomeScreen({
         </section>
       )}
 
+      {onOpenSettings && (
+        <section>
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-sky/35 bg-sky/8 p-5 text-left transition hover:border-sky/60 hover:bg-sky/12"
+          >
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-sky">
+                Avant de commencer
+              </p>
+              <h2 className="mt-1 font-display text-xl font-bold text-foam">
+                Réglages
+              </h2>
+              <p className="mt-1 text-sm text-mist">
+                Caméra, micro, zoom visage, placement des zones, cookies.
+              </p>
+            </div>
+            <span className="shrink-0 rounded-full bg-sky/90 px-3 py-1 text-xs font-semibold text-ink">
+              Ouvrir
+            </span>
+          </button>
+        </section>
+      )}
+
       <section>
         <h2 className="mb-3 font-display text-lg font-bold text-foam">
           Initiation aux LPC
@@ -500,50 +601,19 @@ export function HomeScreen({
           validé.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
-          {lessons.map((t) => {
-            const stats = getTrackStats(t.id as PracticeTrack, pack, progress);
-            const badge = statusBadge(stats);
-            const pct =
-              stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() =>
-                  requestStart(
-                    t.id,
-                    stats.status === "done" ? 0 : stats.resumeIndex,
-                  )
-                }
-                className="group rounded-2xl border border-panel-2/70 bg-panel/60 p-5 text-left transition hover:border-teal/50 hover:bg-panel"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-sky">
-                      Étape {t.badge}
-                    </p>
-                    <h3 className="mt-1 font-display text-xl font-bold">
-                      {t.title}
-                    </h3>
-                    <p className="mt-1 text-sm text-mist">{t.subtitle}</p>
-                    {stats.total > 0 && (
-                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink/70">
-                        <div
-                          className="h-full rounded-full bg-teal/80"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                  <span
-                    className={`shrink-0 rounded-full px-3 py-1 text-xs ${badge.className}`}
-                  >
-                    {badge.label}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
+          {initiation.map(renderLessonCard)}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-3 font-display text-lg font-bold text-foam">
+          Première mise en pratique
+        </h2>
+        <p className="mb-3 text-sm text-mist">
+          Mets les clés en situation : mots du quotidien, puis phrases.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {firstPractice.map(renderLessonCard)}
         </div>
       </section>
 
