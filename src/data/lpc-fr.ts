@@ -347,15 +347,15 @@ export const TRACKS: Array<{
 }> = [
   {
     id: "shapes",
-    title: "Formes",
-    subtitle: "Les 8 configurations de doigts",
+    title: "Clés",
+    subtitle: "Les 8 clés manuelles (configurations)",
     badge: "1",
     kind: "lesson",
   },
   {
     id: "positions",
     title: "Positions",
-    subtitle: "Les 5 zones autour du visage",
+    subtitle: "Les 5 zones — pointe avec l’Index (clé 1)",
     badge: "2",
     kind: "lesson",
   },

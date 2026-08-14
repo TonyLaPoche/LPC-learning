@@ -91,11 +91,11 @@ function packAchievements(
     },
     {
       id: "shapes-all",
-      title: pack === "en" ? "Handshape master" : "Maître des formes",
+      title: pack === "en" ? "Handshape master" : "Maître des clés",
       description:
         pack === "en"
           ? "All 8 English CS handshapes"
-          : "Les 8 configurations de doigts",
+          : "Les 8 clés manuelles",
       unlocked: hasAll(completed, SHAPE_IDS),
     },
     {
@@ -219,7 +219,7 @@ function packAchievements(
     {
       id: "well-rounded",
       title: "Polyvalent",
-      description: "Formes + positions + une syllabe",
+      description: "Clés + positions + une syllabe",
       unlocked:
         countPrefix(completed, "shape-") >= 4 &&
         countPrefix(completed, "pos-") >= 3 &&

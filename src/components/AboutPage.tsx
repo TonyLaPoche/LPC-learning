@@ -33,7 +33,7 @@ export function AboutPage() {
       <section className="space-y-2 rounded-2xl border border-panel-2/70 bg-panel/60 p-4">
         <h2 className="font-display text-lg font-bold">Comment marche l’app</h2>
         <ul className="list-inside list-disc space-y-1.5 text-sm text-mist">
-          <li>Parcours guidés : formes → positions → syllabes → mots → phrases</li>
+          <li>Parcours guidés : clés → positions → syllabes → mots → phrases</li>
           <li>Mode répétitions : 3× guidé, puis rappel sans guide</li>
           <li>
             Caméra + MediaPipe (mains & visage) — traitement local dans le

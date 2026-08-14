@@ -59,6 +59,11 @@ type Step = {
   bonus: boolean;
   /** Durée de maintien pour valider (défaut 1,8 s). */
   holdMs: number;
+  /**
+   * Forme affichée en guide (ex. Index en parcours Positions)
+   * sans l’exiger pour valider — `handshape` reste null = toute forme OK.
+   */
+  guideHandshape?: HandshapeId | null;
   /** Enchaînement multi-clés (parcours mots). */
   sequence?: Array<{
     syllable: string;
@@ -268,8 +273,9 @@ function buildSteps(
     return positions.map((p) => ({
       id: `pos-${p.id}`,
       title: p.label,
-      subtitle: `${p.hint} · ${p.vowels.join(", ")}`,
+      subtitle: `Pointe avec l’Index (clé 1) — les autres formes valident aussi · ${p.vowels.join(", ")}`,
       handshape: null,
+      guideHandshape: "c1" as const,
       position: p.id,
       guided: true,
       bonus: false,
@@ -395,12 +401,17 @@ export function PracticeArena({
     handshape: step.handshape,
     position: step.position,
   };
+  /** Forme montrée à l’écran (guide) — peut différer de la forme exigée. */
+  const shownHandshape =
+    activeCue.handshape ?? step.guideHandshape ?? null;
 
   const vision = useLpcVision({
     videoRef,
     canvasRef,
     cameraReady: camera.ready,
     enabled: true,
+    /** Étape formes : focus main uniquement — pas d’overlay zones visage. */
+    drawZones: track !== "shapes",
     target: {
       handshape: sessionDone || wordPause || !armed ? null : activeCue.handshape,
       position: sessionDone || wordPause || !armed ? null : activeCue.position,
@@ -624,6 +635,7 @@ export function PracticeArena({
     activeCue.handshape && activeCue.position ? activeCue.syllable : null;
 
   const holdHintSec = (step.holdMs / 1000).toFixed(1);
+  const positionsAnyHand = track === "positions";
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
@@ -746,14 +758,22 @@ export function PracticeArena({
             </p>
             {step.guided ? (
               <div className="mt-1.5 flex flex-wrap gap-1.5 text-[10px] sm:text-xs">
-                {activeCue.handshape && (
+                {shownHandshape && (
                   <span className="rounded-full bg-ink/70 px-2 py-0.5 text-teal">
-                    {packHandshape(pack, activeCue.handshape).label}
+                    {packHandshape(pack, shownHandshape).label}
+                    {positionsAnyHand && !activeCue.handshape
+                      ? " · conseillée"
+                      : ""}
                   </span>
                 )}
                 {activeCue.position && (
                   <span className="rounded-full bg-ink/70 px-2 py-0.5 text-sky">
                     {packPosition(pack, activeCue.position).label}
+                  </span>
+                )}
+                {positionsAnyHand && (
+                  <span className="rounded-full bg-ink/50 px-2 py-0.5 text-mist">
+                    Toute forme valide la zone
                   </span>
                 )}
               </div>
@@ -765,7 +785,7 @@ export function PracticeArena({
           </div>
           {step.guided ? (
             <CueExample
-              handshape={activeCue.handshape}
+              handshape={shownHandshape}
               position={activeCue.position}
               lipsLabel={lipsLabel}
               compact
@@ -829,10 +849,25 @@ export function PracticeArena({
           !vision.error && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-ink/75 p-4 text-center backdrop-blur-[2px]">
             <p className="max-w-xs text-sm text-foam">
-              Regarde d’abord <strong className="text-teal">Forme</strong>,{" "}
-              <strong className="text-sky">Zone</strong> et{" "}
-              <strong className="text-coral">Lèvres</strong> en haut — puis
-              prépare ta main.
+              {track === "shapes" ? (
+                <>
+                  Regarde d’abord la <strong className="text-teal">Clé</strong>{" "}
+                  en haut — puis prépare ta main.
+                </>
+              ) : track === "positions" ? (
+                <>
+                  Regarde d’abord la{" "}
+                  <strong className="text-teal">Clé conseillée</strong> (Index),
+                  la <strong className="text-sky">Zone</strong> — puis pointe.
+                </>
+              ) : (
+                <>
+                  Regarde d’abord <strong className="text-teal">Clé</strong>,{" "}
+                  <strong className="text-sky">Zone</strong> et{" "}
+                  <strong className="text-coral">Lèvres</strong> en haut — puis
+                  prépare ta main.
+                </>
+              )}
             </p>
             <button
               type="button"
@@ -883,35 +918,59 @@ export function PracticeArena({
       </div>
       {!sessionDone && !wordPause && (
         <div className="flex shrink-0 flex-col gap-1.5">
-          <div className="grid grid-cols-3 gap-1.5 text-center text-[11px] sm:text-xs">
-            <div
-              className={`rounded-xl border bg-panel/60 px-2 py-1.5 ${
-                activeCue.handshape == null
-                  ? "border-panel-2/70"
-                  : vision.reading.matchHand
+          <div
+            className={`grid gap-1.5 text-center text-[11px] sm:text-xs ${
+              track === "shapes" ? "grid-cols-2" : "grid-cols-3"
+            }`}
+          >
+            {track !== "positions" ? (
+              <div
+                className={`rounded-xl border bg-panel/60 px-2 py-1.5 ${
+                  activeCue.handshape == null
+                    ? "border-panel-2/70"
+                    : vision.reading.matchHand
+                      ? "border-ok/50"
+                      : "border-coral/40"
+                }`}
+              >
+                <p className="text-mist">
+                  {track === "shapes" ? "Clé" : "Forme"}
+                </p>
+                <p className="truncate font-medium">
+                  {step.guided ? shapeLabel : "…"}
+                </p>
+              </div>
+            ) : (
+              <div
+                className={`rounded-xl border bg-panel/60 px-2 py-1.5 ${
+                  vision.reading.handshape
                     ? "border-ok/50"
-                    : "border-coral/40"
-              }`}
-            >
-              <p className="text-mist">Forme</p>
-              <p className="truncate font-medium">
-                {step.guided ? shapeLabel : "…"}
-              </p>
-            </div>
-            <div
-              className={`rounded-xl border bg-panel/60 px-2 py-1.5 ${
-                activeCue.position == null
-                  ? "border-panel-2/70"
-                  : vision.reading.matchPosition
-                    ? "border-ok/50"
-                    : "border-coral/40"
-              }`}
-            >
-              <p className="text-mist">Zone</p>
-              <p className="truncate font-medium">
-                {step.guided ? posLabel : "…"}
-              </p>
-            </div>
+                    : "border-panel-2/70"
+                }`}
+              >
+                <p className="text-mist">Forme (libre)</p>
+                <p className="truncate font-medium">
+                  {shapeLabel}
+                  {vision.reading.handshape === "c1" ? " ✓" : ""}
+                </p>
+              </div>
+            )}
+            {track !== "shapes" && (
+              <div
+                className={`rounded-xl border bg-panel/60 px-2 py-1.5 ${
+                  activeCue.position == null
+                    ? "border-panel-2/70"
+                    : vision.reading.matchPosition
+                      ? "border-ok/50"
+                      : "border-coral/40"
+                }`}
+              >
+                <p className="text-mist">Zone</p>
+                <p className="truncate font-medium">
+                  {step.guided ? posLabel : "…"}
+                </p>
+              </div>
+            )}
             <div className="rounded-xl border border-panel-2/70 bg-panel/60 px-2 py-1.5">
               <p className="text-mist">Hold {holdPct}%</p>
               <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-ink">

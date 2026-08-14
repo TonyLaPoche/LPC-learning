@@ -159,12 +159,12 @@ export function FreePlayArena({ onExit }: FreePlayArenaProps) {
         onClick={() => setShowLegend((v) => !v)}
         className="shrink-0 rounded-full border border-panel-2 px-3 py-1 text-xs text-mist hover:text-foam"
       >
-        {showLegend ? "Masquer le mémo" : "Mémo 8 formes · 5 zones"}
+        {showLegend ? "Masquer le mémo" : "Mémo 8 clés · 5 zones"}
       </button>
 
       {showLegend && (
         <div className="min-h-0 shrink overflow-y-auto rounded-xl border border-panel-2/60 bg-panel/40 p-3 text-[11px]">
-          <p className="mb-2 font-semibold text-foam">Formes</p>
+          <p className="mb-2 font-semibold text-foam">Clés</p>
           <ul className="mb-3 space-y-1 text-mist">
             {HANDSHAPES.map((h) => (
               <li key={h.id}>
