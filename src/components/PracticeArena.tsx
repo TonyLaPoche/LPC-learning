@@ -75,6 +75,8 @@ type Step = {
 };
 
 const HOLD_DEFAULT_MS = 1800;
+/** Initiation syllabes : réactif pour dire le son en même temps. */
+const HOLD_SYLLABLE_MS = 500;
 const HOLD_WORD_LEARN_MS = 800;
 const HOLD_WORD_CHAIN_MS = 500;
 
@@ -286,12 +288,14 @@ function buildSteps(
     return syllables.map((s) => ({
       id: s.id,
       title: s.display,
-      subtitle: s.tip ?? s.label,
+      subtitle: s.tip
+        ? `${s.tip} · Dis le son en codant`
+        : "Clé × zone = son · Dis-le en même temps",
       handshape: s.cue.handshape,
       position: s.cue.position,
       guided: true,
       bonus: false,
-      holdMs: HOLD_DEFAULT_MS,
+      holdMs: HOLD_SYLLABLE_MS,
     }));
   }
   if (track === "phrases") {
@@ -860,6 +864,16 @@ export function PracticeArena({
                   <strong className="text-teal">Clé conseillée</strong> (Index),
                   la <strong className="text-sky">Zone</strong> — puis pointe.
                 </>
+              ) : track === "syllables" ? (
+                <>
+                  <strong className="text-teal">Clé</strong> ×{" "}
+                  <strong className="text-sky">Zone</strong> ={" "}
+                  <strong className="text-coral">son</strong>.{" "}
+                  <span className="text-amber-200">
+                    Dis le son à voix haute
+                  </span>{" "}
+                  en même temps que tu codes.
+                </>
               ) : (
                 <>
                   Regarde d’abord <strong className="text-teal">Clé</strong>,{" "}
@@ -1014,9 +1028,11 @@ export function PracticeArena({
                   ? "Montre une main"
                   : vision.status === "loading"
                     ? "Modèles…"
-                    : step.guided
-                      ? `Tiens la clé ~${holdHintSec} s`
-                      : "Code de mémoire"}
+                    : track === "syllables" && step.guided
+                      ? `Dis le son · tiens ~${holdHintSec} s`
+                      : step.guided
+                        ? `Tiens la clé ~${holdHintSec} s`
+                        : "Code de mémoire"}
             </p>
           </div>
         </div>

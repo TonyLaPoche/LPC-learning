@@ -12,8 +12,35 @@ import type { ProgressState } from "@/lib/progress";
 
 const CURSOR_KEY = "cle-lpc-track-cursor-v1";
 const INTRO_KEY = "cle-lpc-intro-seen-v1";
+const TRACK_INTRO_KEY = "cle-lpc-track-intro-seen-v1";
 
 type CursorMap = Record<string, number>;
+type TrackIntroMap = Partial<Record<"shapes" | "positions", boolean>>;
+
+function loadTrackIntroMap(): TrackIntroMap {
+  try {
+    const raw = localStorage.getItem(TRACK_INTRO_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as TrackIntroMap;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function loadTrackIntroSeen(track: "shapes" | "positions"): boolean {
+  return loadTrackIntroMap()[track] === true;
+}
+
+export function markTrackIntroSeen(track: "shapes" | "positions"): void {
+  try {
+    const map = loadTrackIntroMap();
+    map[track] = true;
+    localStorage.setItem(TRACK_INTRO_KEY, JSON.stringify(map));
+  } catch {
+    /* ignore */
+  }
+}
 
 function cursorStorageKey(pack: PackId, track: string): string {
   return `${pack}:${track}`;

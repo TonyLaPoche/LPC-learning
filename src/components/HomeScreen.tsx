@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { IntroBanner } from "@/components/IntroBanner";
+import {
+  TrackIntroModal,
+  isTrackIntroTrack,
+} from "@/components/TrackIntroModal";
 import { TRACKS, type LessonTrack } from "@/data/lpc-fr";
 import { PACKS, PACK_WIP, packById, type PackId } from "@/data/packs";
 import type { ProgressState } from "@/lib/progress";
@@ -8,6 +12,8 @@ import { BUY_ME_A_COFFEE_URL, SUPPORT_COPY } from "@/lib/support";
 import {
   getTrackStats,
   loadIntroSeen,
+  loadTrackIntroSeen,
+  markTrackIntroSeen,
   type TrackStats,
 } from "@/lib/trackProgress";
 
@@ -64,8 +70,23 @@ export function HomeScreen({
   const [showIntro, setShowIntro] = useState(() => !loadIntroSeen());
   const [enWipOpen, setEnWipOpen] = useState(false);
   const [debugToast, setDebugToast] = useState<string | null>(null);
+  const [pendingIntro, setPendingIntro] = useState<{
+    track: "shapes" | "positions";
+    resumeIndex?: number;
+  } | null>(null);
   const bufferRef = useRef("");
   const resetTimer = useRef(0);
+
+  const requestStart = (track: LessonTrack, resumeIndex?: number) => {
+    if (
+      isTrackIntroTrack(track) &&
+      !loadTrackIntroSeen(track)
+    ) {
+      setPendingIntro({ track, resumeIndex });
+      return;
+    }
+    onStart(track, resumeIndex);
+  };
 
   useEffect(() => {
     if (!onToggleDebugMenu) return;
@@ -140,7 +161,7 @@ export function HomeScreen({
             <span className="block text-teal">Vois les sons.</span>
           </h1>
           <p className="mt-3 text-base text-mist sm:text-lg">
-            Parcours guidé et répétitions — pack{" "}
+            Parcours d’initiation et répétitions — pack{" "}
             <span className="text-foam">{meta.label}</span>, progression locale
             sur ton appareil (pas besoin de compte).
           </p>
@@ -472,11 +493,11 @@ export function HomeScreen({
 
       <section>
         <h2 className="mb-3 font-display text-lg font-bold text-foam">
-          Parcours d’apprentissage
+          Initiation aux LPC
         </h2>
         <p className="mb-3 text-sm text-mist">
-          Les pastilles indiquent ce qui est déjà validé — tu peux reprendre où
-          tu t’es arrêté.
+          Clés, zones, puis le combo — les pastilles montrent ce qui est déjà
+          validé.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           {lessons.map((t) => {
@@ -489,7 +510,7 @@ export function HomeScreen({
                 key={t.id}
                 type="button"
                 onClick={() =>
-                  onStart(
+                  requestStart(
                     t.id,
                     stats.status === "done" ? 0 : stats.resumeIndex,
                   )
@@ -564,6 +585,24 @@ export function HomeScreen({
           })}
         </div>
       </section>
+
+      {pendingIntro && (
+        <TrackIntroModal
+          track={pendingIntro.track}
+          onContinue={() => {
+            const p = pendingIntro;
+            setPendingIntro(null);
+            onStart(p.track, p.resumeIndex);
+          }}
+          onSkipForever={() => {
+            const p = pendingIntro;
+            markTrackIntroSeen(p.track);
+            setPendingIntro(null);
+            onStart(p.track, p.resumeIndex);
+          }}
+          onCancel={() => setPendingIntro(null)}
+        />
+      )}
     </div>
   );
 }

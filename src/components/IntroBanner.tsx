@@ -31,10 +31,10 @@ export function IntroBanner({ onDismiss }: IntroBannerProps) {
           n’est validé (même si la caméra te voit).
         </li>
         <li>
-          Tiens la clé ~2 s. Tu peux{" "}
+          Tiens la clé le temps indiqué. Tu peux{" "}
           <strong className="text-foam">recommencer</strong> l’étape ou{" "}
-          <strong className="text-foam">reprendre</strong> un parcours plus
-          tard : ta progression reste sur cet appareil.
+          <strong className="text-foam">reprendre</strong> plus tard : ta
+          progression reste sur cet appareil.
         </li>
       </ol>
       <button
